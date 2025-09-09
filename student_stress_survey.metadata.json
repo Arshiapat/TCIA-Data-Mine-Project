@@ -1,0 +1,20 @@
+{
+  "@context": "https://mlcommons.org/croissant/context/v1",
+  "name": "student_stress_survey",
+  "description": "Survey responses collected from a Google Form about study habits and stress.",
+  "license": "CC-BY",
+  "features": [
+    {
+      "name": "study_hours",
+      "type": "integer"
+    },
+    {
+      "name": "stress_level",
+      "type": "integer"
+    },
+    {
+      "name": "free_response",
+      "type": "string"
+    }
+  ]
+}
