@@ -1,37 +1,81 @@
-"""
-TCIA Unified Proposal – Streamlit App
+def update_record_fields(proposal_type: str, submission_id: str, updates: dict) -> bool:
+    """Find the parquet partition file that contains submission_id for this proposal_type
+    and update its fields with the updates dict. Returns True if an update occurred."""
+    base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
+    if not os.path.isdir(base):
+        return False
 
-Features
-- Public submission (no login) with required-field validation
-- Single app for two proposal types: New Collection Proposal, Analysis Results Proposal
-- Controlled vocab for multi-select fields from user's spec (with "Other" text boxes)
-- Append-only Parquet dataset partitioned by proposal_type & dt=YYYY-MM-DD
-- UUID + created_at, client IP (best-effort) and user agent snapshot
-- Basic abuse protection: honeypot, per-session cooldown, simple request throttle
-- Admin reviewer view protected by PIN + time-limited signed token (HMAC)
-- Optional alerts: SMTP email + Slack webhook (env-driven)
-- Optional PDF receipt (ReportLab) for submitter (env-driven)
-- Streamlit Community Cloud friendly (local file storage)
+    import sys
+    print(f"[DEBUG] Searching for submission_id={submission_id} in {base}", file=sys.stderr)
+    found = False
+    for root, _, files in os.walk(base):
+        for f in files:
+            if not f.endswith(".parquet"):
+                continue
+            p = os.path.join(root, f)
+            print(f"[DEBUG] Checking file: {p}", file=sys.stderr)
+            try:
+                df = pd.read_parquet(p, engine=parquet_engine())
+            except Exception as e:
+                print(f"[DEBUG] Failed to read {p}: {e}", file=sys.stderr)
+                continue
+            if "submission_id" not in df.columns:
+                print(f"[DEBUG] No submission_id column in {p}", file=sys.stderr)
+                continue
+            mask = df["submission_id"] == submission_id
+            if mask.any():
+                found = True
+                print(f"[DEBUG] Found submission_id in {p}", file=sys.stderr)
+                for k, v in updates.items():
+                    # Convert lists/dicts to JSON string for Parquet compatibility
+                    if isinstance(v, (list, dict)):
+                        import json
+                        v = json.dumps(v)
+                    df.loc[mask, k] = v
+                try:
+                    df.to_parquet(p, engine=parquet_engine(), index=False)
+                    print(f"[DEBUG] Successfully updated {p}", file=sys.stderr)
+                    return True
+                except Exception as e:
+                    print(f"[DEBUG] Failed to write {p}: {e}", file=sys.stderr)
+                    return False
+    if not found:
+        print(f"[DEBUG] submission_id={submission_id} not found in any partition for {proposal_type}", file=sys.stderr)
+    return False
+# """
+# TCIA Unified Proposal – Streamlit App
 
-Env (.streamlit/secrets.toml or OS env)
-- DATA_DIR = "./data/parquet"
-- ADMIN_PIN = "123456"
-- ADMIN_IP_ALLOWLIST = ""  # comma-separated (optional), e.g. "1.2.3.4,5.6.7.8"
-- TOKEN_SECRET = "change-me"
-- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (optional)
-- EMAIL_FROM_ADDR = "johntuck4234@gmail.com"  # testing default
-- EMAIL_FROM_NAME = "TCIA Submissions"
-- SLACK_WEBHOOK_URL (optional)
-- BRAND_LOGO_URL (optional, used in emails/PDF)
+# Features
+# - Public submission (no login) with required-field validation
+# - Single app for two proposal types: New Collection Proposal, Analysis Results Proposal
+# - Controlled vocab for multi-select fields from user's spec (with "Other" text boxes)
+# - Append-only Parquet dataset partitioned by proposal_type & dt=YYYY-MM-DD
+# - UUID + created_at, client IP (best-effort) and user agent snapshot
+# - Basic abuse protection: honeypot, per-session cooldown, simple request throttle
+# - Admin reviewer view protected by PIN + time-limited signed token (HMAC)
+# - Optional alerts: SMTP email + Slack webhook (env-driven)
+# - Optional PDF receipt (ReportLab) for submitter (env-driven)
+# - Streamlit Community Cloud friendly (local file storage)
 
-Run locally
-- pip install -r requirements.txt
-- streamlit run app.py
+# Env (.streamlit/secrets.toml or OS env)
+# - DATA_DIR = "./data/parquet"
+# - ADMIN_PIN = "123456"
+# - ADMIN_IP_ALLOWLIST = ""  # comma-separated (optional), e.g. "1.2.3.4,5.6.7.8"
+# - TOKEN_SECRET = "change-me"
+# - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (optional)
+# - EMAIL_FROM_ADDR = "johntuck4234@gmail.com"  # testing default
+# - EMAIL_FROM_NAME = "TCIA Submissions"
+# - SLACK_WEBHOOK_URL (optional)
+# - BRAND_LOGO_URL (optional, used in emails/PDF)
 
-Deploy: Streamlit Community Cloud
-- Add these env vars in the app settings → Secrets.
-- Ensure the app has write access to ./data/ (default in Community Cloud ephemeral FS).
-"""
+# Run locally
+# - pip install -r requirements.txt
+# - streamlit run app.py
+
+# Deploy: Streamlit Community Cloud
+# - Add these env vars in the app settings → Secrets.
+# - Ensure the app has write access to ./data/ (default in Community Cloud ephemeral FS).
+# """
 
 import os
 import re
@@ -55,7 +99,7 @@ import streamlit as st
 # Config & Utility
 # ----------------------------
 APP_TITLE = "TCIA Proposal Submissions"
-DATA_DIR = os.getenv("DATA_DIR", "C:\\Users\\harir\\OneDrive\\Documents\\College\\Year3\\Fall2025\\TDM")
+DATA_DIR = os.getenv("DATA_DIR", "./data/parquet")
 TOKEN_SECRET = os.getenv("TOKEN_SECRET", "change-me")
 ADMIN_PIN = os.getenv("ADMIN_PIN", "123456")
 ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.getenv("ADMIN_IP_ALLOWLIST", "").split(',') if ip.strip()]
@@ -113,6 +157,17 @@ PUBLISH_REASONS = [
     "To facilitate a challenge competition"
 ]
 
+# Proposal workflow statuses
+PROPOSAL_STATUSES = [
+    "New",
+    "Preliminary Review",
+    "Ready for AG Presentation",
+    "Awaiting answers to AG questions",
+    "Accepted",
+    "Rejected",
+    "Data Submission Agreement",
+]
+
 # ----------------------------
 # Validators
 # ----------------------------
@@ -165,6 +220,41 @@ def write_record(proposal_type: str, record: dict):
         df_all.to_parquet(file_path, engine=parquet_engine(), index=False)
     else:
         df_new.to_parquet(file_path, engine=parquet_engine(), index=False)
+
+
+def update_record_status(proposal_type: str, submission_id: str, new_status: str) -> bool:
+    """Find the parquet partition file that contains submission_id for this proposal_type
+    and update its proposal_status field. Returns True if an update occurred."""
+    base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
+    if not os.path.isdir(base):
+        return False
+
+    updated = False
+    for root, _, files in os.walk(base):
+        for f in files:
+            if not f.endswith(".parquet"):
+                continue
+            p = os.path.join(root, f)
+            try:
+                df = pd.read_parquet(p, engine=parquet_engine())
+            except Exception:
+                continue
+            if "submission_id" not in df.columns:
+                continue
+            mask = df["submission_id"] == submission_id
+            if mask.any():
+                # ensure column exists
+                if "proposal_status" not in df.columns:
+                    df["proposal_status"] = "New"
+                df.loc[mask, "proposal_status"] = new_status
+                try:
+                    df.to_parquet(p, engine=parquet_engine(), index=False)
+                    updated = True
+                except Exception:
+                    # if write fails, try to continue and report false
+                    return False
+                return True
+    return updated
 
 
 # ----------------------------
@@ -497,6 +587,7 @@ def submit_page():
             "submission_id": submission_id,
             "created_at": created_at,
             "proposal_type": proposal_type.replace(" ", "_").lower(),
+            "proposal_status": "New",
             "email": email.strip(),
             "scientific_poc": sci_poc.strip(),
             "technical_poc": tech_poc.strip(),
@@ -551,9 +642,7 @@ def submit_page():
 # Admin Page
 # ----------------------------
 
-
-# John's admin page without e
-#def admin_page():
+def admin_page():
     header()
     st.subheader("Admin / Reviewer Portal")
 
@@ -589,688 +678,53 @@ def submit_page():
     ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=0)
     date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value="")
 
+    # Load submissions and store in session_state
     if st.button("Load Submissions", use_container_width=True):
         records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
+        if records_df is not None and not records_df.empty:
+            if "proposal_status" not in records_df.columns:
+                records_df["proposal_status"] = "New"
+            st.session_state["records_df"] = records_df
         else:
-            st.dataframe(records_df, use_container_width=True)
-            csv = records_df.to_csv(index=False).encode()
-            st.download_button("Download CSV", csv, file_name=f"tcia_{ptype}_{date or 'all'}.csv")
-            # Parquet download of the concatenated view
-            try:
-                buf = io.BytesIO()
-                records_df.to_parquet(buf, engine=parquet_engine(), index=False)
-                st.download_button("Download Parquet", buf.getvalue(), file_name=f"tcia_{ptype}_{date or 'all'}.parquet")
-            except Exception as e:
-                st.info("Parquet download not available: " + str(e))
+            st.session_state["records_df"] = None
 
-
-#def admin_page():
-    header()
-    st.subheader("Admin / Reviewer Portal")
-
-    # Auth check
-    if ADMIN_IP_ALLOWLIST:
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        pin = st.text_input("Enter Admin PIN", type="password")
-    with col2:
-        if st.button("Get Token", use_container_width=True):
-            if pin == ADMIN_PIN:
-                tok = sign_token("admin", ttl_seconds=1800)
-                st.session_state.admin_token = tok
-                st.session_state.admin_authed_until = time.time() + 1800
-                st.success("Token issued. You have 30 minutes.")
-            else:
-                st.error("Invalid PIN")
-
-    token = st.text_input("Or paste an existing token", value=st.session_state.admin_token or "")
-    if not (token and verify_token(token)):
-        st.info("Enter a valid PIN or token to proceed.")
-        return
-
-    # Controls
-    st.markdown("---")
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=0)
-    date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value="")
-
-    if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
-        else:
-            st.dataframe(records_df, use_container_width=True)
-
-            # Select submission to edit
-            submission_ids = records_df["submission_id"].tolist()
-            selected_id = st.selectbox("Select a Submission to Edit", [""] + submission_ids)
-
-            if selected_id:
-                record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-                st.write("### Edit Submission")
-                with st.form("edit_form", clear_on_submit=False):
-                    new_title = st.text_input("Dataset Title", value=record.get("dataset_title", ""))
-                    new_desc = st.text_area("Dataset Description", value=record.get("dataset_description", ""))
-                    new_authors = st.text_area("Authors", value=record.get("authors", ""))
-
-                    updated = st.form_submit_button("Update Submission", use_container_width=True)
-
-                if updated:
-                    # Update record in dataframe
-                    idx = records_df.index[records_df["submission_id"] == selected_id][0]
-                    records_df.at[idx, "dataset_title"] = new_title.strip()
-                    records_df.at[idx, "dataset_description"] = new_desc.strip()
-                    records_df.at[idx, "authors"] = new_authors.strip()
-
-                    # Save back to Parquet (overwrite partition)
-                    part_dir = os.path.join(DATA_DIR, f"proposal_type={ptype}")
-                    if date:
-                        part_dir = os.path.join(part_dir, f"dt={date}")
-                    os.makedirs(part_dir, exist_ok=True)
-                    file_path = os.path.join(part_dir, "data.parquet")
-                    records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-                    st.success(f"Submission {selected_id} updated successfully!")
-
-
-
-# def admin_page():
-    header()
-    st.subheader("Admin / Reviewer Portal")
-
-    # --- Auth ---
-    if ADMIN_IP_ALLOWLIST:
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        pin = st.text_input("Enter Admin PIN", type="password")
-    with col2:
-        if st.button("Get Token", use_container_width=True):
-            if pin == ADMIN_PIN:
-                tok = sign_token("admin", ttl_seconds=1800)
-                st.session_state.admin_token = tok
-                st.session_state.admin_authed_until = time.time() + 1800
-                st.success("Token issued. You have 30 minutes.")
-            else:
-                st.error("Invalid PIN")
-
-    token = st.text_input("Or paste an existing token", value=st.session_state.admin_token or "")
-    if not (token and verify_token(token)):
-        st.info("Enter a valid PIN or token to proceed.")
-        return
-
-    # --- Filters ---
-    st.markdown("---")
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=0)
-    date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value="")
-
-    # --- Load submissions into session_state ---
-    if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
-        else:
-            st.session_state.records_df = records_df
-            st.session_state.ptype = ptype
-            st.session_state.date = date
-            st.success("Submissions loaded.")
-
-    # --- Show submissions if available ---
-    #if "records_df" in st.session_state and not st.session_state.records_df.empty:
-        records_df = st.session_state.records_df
+    # Show submissions if loaded
+    records_df = st.session_state.get("records_df", None)
+    if records_df is not None:
         st.dataframe(records_df, use_container_width=True)
+        csv = records_df.to_csv(index=False).encode()
+        st.download_button("Download CSV", csv, file_name=f"tcia_{ptype}_{date or 'all'}.csv")
+        try:
+            buf = io.BytesIO()
+            records_df.to_parquet(buf, engine=parquet_engine(), index=False)
+            st.download_button("Download Parquet", buf.getvalue(), file_name=f"tcia_{ptype}_{date or 'all'}.parquet")
+        except Exception as e:
+            st.info("Parquet download not available: " + str(e))
 
-        submission_ids = records_df["submission_id"].tolist()
-        selected_id = st.selectbox("Select a Submission to Edit", [""] + submission_ids)
-
-        if selected_id:
-            record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-            st.write("### Edit Submission")
-            with st.form("edit_form", clear_on_submit=False):
-                new_title = st.text_input("Dataset Title", value=record.get("dataset_title", ""))
-                new_desc = st.text_area("Dataset Description", value=record.get("dataset_description", ""))
-                new_authors = st.text_area("Authors", value=record.get("authors", ""))
-
-                updated = st.form_submit_button("Update Submission", use_container_width=True)
-
-            if updated:
-                ...
-    
-    if "records_df" in st.session_state and not st.session_state.records_df.empty:
-        records_df = st.session_state.records_df
-        st.dataframe(records_df, use_container_width=True)
-
-    submission_ids = records_df["submission_id"].tolist()
-    selected_id = st.selectbox("Select a Submission", [""] + submission_ids)
-
-    if selected_id:
-        record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-        st.write("### Manage Submission")
-
-        # ---- Edit Form (dynamic) ----
-        updated_values = {}
-        with st.form("edit_form", clear_on_submit=False):
-            for k, v in record.items():
-                if k in ["submission_id", "created_at", "client_ip", "user_agent"]:
-                    st.text_input(k, value=str(v), disabled=True)
-                    updated_values[k] = v
-                    continue
-
-                if isinstance(v, (int, float)):
-                    updated_values[k] = st.number_input(k, value=float(v))
-                elif isinstance(v, str) and len(v) > 150:
-                    updated_values[k] = st.text_area(k, value=v)
+        st.markdown("---")
+        st.subheader("Edit Submission Response")
+        sid = st.selectbox("Select Submission ID", options=records_df["submission_id"].tolist(), key="select_sid")
+        row = records_df.loc[records_df["submission_id"] == sid].iloc[0].to_dict()
+        editable_fields = [k for k in row.keys() if k not in ["submission_id", "created_at", "proposal_type"]]
+        updates = {}
+        for k in editable_fields:
+            v = row[k]
+            if k == "proposal_status":
+                new_v = st.selectbox("Proposal Status", options=PROPOSAL_STATUSES, index=PROPOSAL_STATUSES.index(v) if v in PROPOSAL_STATUSES else 0, key=f"status_{sid}")
+            else:
+                new_v = st.text_area(k.replace("_", " ").title(), value=str(v) if v is not None else "", key=f"edit_{k}_{sid}")
+            if str(new_v) != str(v):
+                updates[k] = new_v
+        if st.button("Update Submission", use_container_width=True):
+            if updates:
+                ok = update_record_fields(ptype, sid, updates)
+                if ok:
+                    st.success(f"Updated {sid} fields: {', '.join(updates.keys())}")
                 else:
-                    updated_values[k] = st.text_input(k, value=str(v))
-
-            updated = st.form_submit_button("Update Submission", use_container_width=True)
-
-        if updated:
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-            records_df = pd.concat([records_df, pd.DataFrame([updated_values])], ignore_index=True)
-
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-            st.session_state.records_df = records_df
-            st.success(f"Submission {selected_id} updated successfully! Old version removed.")
-
-        # ---- Delete Button ----
-        if st.button(f"Delete Submission {selected_id}", type="primary"):
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-            st.session_state.records_df = records_df
-            st.success(f"Submission {selected_id} deleted successfully!")
-        if "records_df" in st.session_state:
-            records_df = st.session_state.records_df
-
-        if records_df is None or records_df.empty:
-            st.warning("No submissions available.")
-            return  # stop here so it doesn't try to build the selectbox
-
-        st.dataframe(records_df, use_container_width=True)
-
-        submission_ids = records_df["submission_id"].tolist()
-        selected_id = st.selectbox("Select a Submission", [""] + submission_ids)
-
-# def admin_page():
-    header()
-    st.subheader("Admin / Reviewer Portal")
-
-    # --- Auth ---
-    if ADMIN_IP_ALLOWLIST:
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        pin = st.text_input("Enter Admin PIN", type="password")
-    with col2:
-        if st.button("Get Token", use_container_width=True):
-            if pin == ADMIN_PIN:
-                tok = sign_token("admin", ttl_seconds=1800)
-                st.session_state.admin_token = tok
-                st.session_state.admin_authed_until = time.time() + 1800
-                st.success("Token issued. You have 30 minutes.")
+                    st.error("Failed to update record. Check file permissions and that the partition contains the record.")
             else:
-                st.error("Invalid PIN")
+                st.info("No changes to update.")
 
-    token = st.text_input("Or paste an existing token", value=st.session_state.admin_token or "")
-    if not (token and verify_token(token)):
-        st.info("Enter a valid PIN or token to proceed.")
-        return
-
-    # --- Filters ---
-    st.markdown("---")
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=0)
-    date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value="")
-
-    # --- Load submissions into session_state ---
-    if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
-            # Explicitly clear session state on empty load to prevent stale data display
-            st.session_state.pop("records_df", None)
-            return # Exit after warning
-        else:
-            st.session_state.records_df = records_df
-            st.session_state.ptype = ptype
-            st.session_state.date = date
-            st.success("Submissions loaded.")
-
-    # --- Retrieve records_df from session state or initialize it ---
-    # This ensures records_df is bound if it was previously loaded.
-    records_df = st.session_state.get("records_df")
-
-    # --- Show submissions if available ---
-    if records_df is None or records_df.empty:
-        st.warning("No submissions available. Use 'Load Submissions' to view data.")
-        return  # Stop execution if no data is loaded
-
-    # Data loaded and available, proceed with display and management
-    st.dataframe(records_df, use_container_width=True)
-
-    submission_ids = records_df["submission_id"].tolist()
-    selected_id = st.selectbox("Select a Submission", [""] + submission_ids)
-
-    if selected_id:
-        record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-        st.write("### Manage Submission")
-
-        # ---- Edit Form (dynamic) ----
-        updated_values = {}
-        with st.form("edit_form", clear_on_submit=False):
-            for k, v in record.items():
-                if k in ["submission_id", "created_at", "client_ip", "user_agent"]:
-                    st.text_input(k, value=str(v), disabled=True)
-                    updated_values[k] = v
-                    continue
-
-                # The logic for setting updated_values[k] for editable fields remains the same
-                if isinstance(v, (int, float)):
-                    updated_values[k] = st.number_input(k, value=float(v))
-                elif isinstance(v, str) and len(v) > 150:
-                    updated_values[k] = st.text_area(k, value=v)
-                else:
-                    updated_values[k] = st.text_input(k, value=str(v))
-
-            updated = st.form_submit_button("Update Submission", use_container_width=True)
-
-        if updated:
-            # Update logic remains the same (delete old row, append new row)
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-            records_df = pd.concat([records_df, pd.DataFrame([updated_values])], ignore_index=True)
-
-            # Persist and update session state
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-            st.session_state.records_df = records_df
-            st.success(f"Submission {selected_id} updated successfully! Old version removed.")
-            st.rerun() # Use st.rerun() to refresh the display immediately
-
-        # ---- Delete Button ----
-        # This is where the error you specifically mentioned (deleting all records)
-        # would occur if not handled by the check above.
-        if st.button(f"Delete Submission {selected_id}", type="primary"):
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-
-            # Persist and update session state
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            
-            # Write back the new (potentially empty) DataFrame
-            if records_df.empty:
-                # If the DataFrame is empty, you might want to delete the file/partition
-                # For simplicity here, we'll write an empty Parquet file, which is valid.
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                # If the last record was deleted, we explicitly clear the session state.
-                st.session_state.pop("records_df", None)
-            else:
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                st.session_state.records_df = records_df
-
-            st.success(f"Submission {selected_id} deleted successfully!")
-            st.rerun() # Use st.rerun() to refresh the display immediately
-
-# def admin_page():
-    header()
-    st.subheader("Admin / Reviewer Portal")
-
-    # --- Auth ---
-    if ADMIN_IP_ALLOWLIST:
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        pin = st.text_input("Enter Admin PIN", type="password")
-    with col2:
-        if st.button("Get Token", use_container_width=True):
-            if pin == ADMIN_PIN:
-                tok = sign_token("admin", ttl_seconds=1800)
-                st.session_state.admin_token = tok
-                st.session_state.admin_authed_until = time.time() + 1800
-                st.success("Token issued. You have 30 minutes.")
-            else:
-                st.error("Invalid PIN")
-
-    token = st.text_input("Or paste an existing token", value=st.session_state.admin_token or "")
-    if not (token and verify_token(token)):
-        st.info("Enter a valid PIN or token to proceed.")
-        return
-
-    # --- Filters ---
-    st.markdown("---")
-    # Use session state defaults if they exist, otherwise use the default values
-    default_ptype = st.session_state.get("ptype", "new_collection")
-    default_date = st.session_state.get("date", "")
-    
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=["new_collection", "analysis_results"].index(default_ptype))
-    date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value=default_date)
-
-    # --- Load submissions into session_state ---
-    if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
-            st.session_state.pop("records_df", None) # Clear stale data
-        else:
-            st.session_state.records_df = records_df
-            st.session_state.ptype = ptype
-            st.session_state.date = date
-            st.success("Submissions loaded.")
-            
-        st.rerun() # Rerun to refresh the UI elements below
-
-    # --- Retrieve records_df from session state or initialize it ---
-    records_df = st.session_state.get("records_df")
-
-    if records_df is None or records_df.empty:
-        st.warning("No submissions available. Use 'Load Submissions' to view data.")
-        # Do not proceed with display or management if no data is loaded
-        return
-
-    # Data loaded and available, proceed with display and management
-    st.dataframe(records_df, use_container_width=True)
-
-    submission_ids = records_df["submission_id"].tolist()
-    selected_id = st.selectbox("Select a Submission", [""] + submission_ids)
-
-    if selected_id:
-        record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-        st.write("### Manage Submission")
-
-        # ---- Edit Form (dynamic) ----
-        updated_values = {}
-        with st.form("edit_form", clear_on_submit=False):
-            # Create editable fields for all keys in the selected record
-            for k, v in record.items():
-                # Fields that shouldn't be edited via this general form
-                if k in ["submission_id", "created_at", "client_ip", "user_agent", "proposal_type"]:
-                    st.text_input(k, value=str(v), disabled=True)
-                    updated_values[k] = v
-                    continue
-
-                # Dynamic field creation based on value type/length
-                if isinstance(v, (int, float)):
-                    updated_values[k] = st.number_input(k, value=float(v), key=f"edit_{k}")
-                elif isinstance(v, str) and len(v) > 150:
-                    updated_values[k] = st.text_area(k, value=v, key=f"edit_{k}")
-                else:
-                    updated_values[k] = st.text_input(k, value=str(v), key=f"edit_{k}")
-
-            updated = st.form_submit_button("Update Submission", use_container_width=True)
-
-        if updated:
-            # 1. DELETE OLD RECORD: Filter out the old record
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-            
-            # 2. ADD NEW/UPDATED RECORD: Append the updated values as a new row
-            records_df = pd.concat([records_df, pd.DataFrame([updated_values])], ignore_index=True)
-
-            # 3. PERSIST (OVERWRITE PARTITION): Save back to Parquet
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            
-            # Use the correct engine and index=False
-            records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-            # 4. UPDATE SESSION STATE: Store the new DataFrame
-            st.session_state.records_df = records_df
-            st.success(f"Submission {selected_id} updated successfully! Old version removed.")
-            st.rerun() # Rerun to refresh the display
-
-        # ---- Delete Button ----
-        if st.button(f"Delete Submission {selected_id}", type="primary"):
-            # 1. DELETE RECORD: Filter out the selected record
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-
-            # 2. PERSIST (OVERWRITE PARTITION)
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={st.session_state.ptype}")
-            if st.session_state.date:
-                part_dir = os.path.join(part_dir, f"dt={st.session_state.date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-
-            # Save the new (potentially empty) DataFrame
-            if records_df.empty:
-                # If the last record was deleted, we still write an empty file or remove it.
-                # Writing an empty Parquet file is safer for data integrity/loading.
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                st.session_state.pop("records_df", None) # Clear from session state
-            else:
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                st.session_state.records_df = records_df # Update session state
-
-            st.success(f"Submission {selected_id} deleted successfully!")
-            st.rerun() # Rerun to refresh the display
-
-import streamlit as st
-import pandas as pd
-import os
-import time
-# Assuming the following functions and constants are defined elsewhere in intake.py:
-# header, sidebar_nav, client_ip, sign_token, verify_token, parquet_engine, load_records
-# ADMIN_IP_ALLOWLIST, ADMIN_PIN, DATA_DIR
-
-def admin_page():
-    header()
-    st.subheader("Admin / Reviewer Portal")
-
-    # --- Auth ---
-    if ADMIN_IP_ALLOWLIST:
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        pin = st.text_input("Enter Admin PIN", type="password")
-    with col2:
-        if st.button("Get Token", use_container_width=True):
-            if pin == ADMIN_PIN:
-                tok = sign_token("admin", ttl_seconds=1800)
-                st.session_state.admin_token = tok
-                st.session_state.admin_authed_until = time.time() + 1800
-                st.success("Token issued. You have 30 minutes.")
-            else:
-                st.error("Invalid PIN")
-
-    token = st.text_input("Or paste an existing token", value=st.session_state.admin_token or "")
-    if not (token and verify_token(token)):
-        st.info("Enter a valid PIN or token to proceed.")
-        return
-
-    # --- Filters ---
-    st.markdown("---")
-    # Use session state defaults if they exist, otherwise use the default values
-    default_ptype = st.session_state.get("ptype", "new_collection")
-    default_date = st.session_state.get("date", "")
-    
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], 
-                         index=["new_collection", "analysis_results"].index(default_ptype))
-    
-    date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value=default_date)
-
-    # --- Load submissions into session_state ---
-    if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is None or records_df.empty:
-            st.warning("No submissions found for the selected filters.")
-            # Clear all relevant session state variables on empty load
-            st.session_state.pop("records_df", None)
-            st.session_state.pop("ptype", None)
-            st.session_state.pop("date", None)
-        else:
-            st.session_state.records_df = records_df
-            st.session_state.ptype = ptype
-            st.session_state.date = date
-            st.success("Submissions loaded.")
-            
-        st.rerun() # Rerun to refresh the UI elements below
-
-    # --- Retrieve records_df from session state (Fixes UnboundLocalError) ---
-    records_df = st.session_state.get("records_df")
-    current_load_date = st.session_state.get("date")
-    current_load_ptype = st.session_state.get("ptype")
-
-    if records_df is None or records_df.empty:
-        st.warning("No submissions available. Use 'Load Submissions' to view data.")
-        return
-
-    # --- Display Data ---
-    st.dataframe(records_df, use_container_width=True)
-
-    submission_ids = records_df["submission_id"].tolist()
-    selected_id = st.selectbox("Select a Submission", [""] + submission_ids)
-
-    
-    # --- Modification Logic (Update/Delete) ---
-    
-    # This check is crucial: modifications are only safe when a single partition is loaded.
-    modification_allowed = bool(current_load_date)
-    if not modification_allowed:
-        st.error("🚨 **Error:** You cannot edit or delete records when the 'Date partition' is blank (All Dates). Please select a specific date (YYYY-MM-DD) and reload to manage submissions for that day.")
-
-    if selected_id:
-        record = records_df[records_df["submission_id"] == selected_id].iloc[0].to_dict()
-
-        st.write("### Manage Submission")
-        
-        # ---- Edit Form (dynamic) ----
-        updated_values = {}
-        with st.form("edit_form", clear_on_submit=False):
-            for k, v in record.items():
-                if k in ["submission_id", "created_at", "client_ip", "user_agent", "proposal_type"]:
-                    st.text_input(k, value=str(v), disabled=True)
-                    updated_values[k] = v
-                    continue
-
-                unique_key = f"edit_{selected_id}_{k}"
-                
-                if isinstance(v, (int, float)):
-                    updated_values[k] = st.number_input(k, value=float(v) if v is not None else 0.0, key=unique_key)
-                elif isinstance(v, str) and len(v) > 150:
-                    updated_values[k] = st.text_area(k, value=v, key=unique_key)
-                else:
-                    updated_values[k] = st.text_input(k, value=str(v), key=unique_key)
-
-            updated = st.form_submit_button("Update Submission", use_container_width=True, disabled=not modification_allowed)
-
-        if updated and modification_allowed:
-            # 1. DELETE OLD RECORD: Filter out the old record (Fixes update issue)
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-            
-            # 2. ADD NEW/UPDATED RECORD: Append the updated values as a new row
-            records_df = pd.concat([records_df, pd.DataFrame([updated_values])], ignore_index=True)
-
-            # 3. PERSIST (OVERWRITE PARTITION)
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={current_load_ptype}", f"dt={current_load_date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-            
-            records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-
-            # 4. UPDATE SESSION STATE
-            st.session_state.records_df = records_df
-            st.success(f"Submission {selected_id} updated successfully! Old version removed.")
-            st.rerun()
-
-        # ---- Delete Button (Individual Record) ----
-        if st.button(f"Delete Submission {selected_id}", type="primary", disabled=not modification_allowed):
-            if not modification_allowed:
-                return
-
-            # 1. DELETE RECORD: Filter out the selected record
-            records_df = records_df[records_df["submission_id"] != selected_id].copy()
-
-            # 2. PERSIST (OVERWRITE PARTITION)
-            part_dir = os.path.join(DATA_DIR, f"proposal_type={current_load_ptype}", f"dt={current_load_date}")
-            os.makedirs(part_dir, exist_ok=True)
-            file_path = os.path.join(part_dir, "data.parquet")
-
-            if records_df.empty:
-                # Overwrite with 0 rows
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                st.session_state.pop("records_df", None)
-            else:
-                records_df.to_parquet(file_path, engine=parquet_engine(), index=False)
-                st.session_state.records_df = records_df
-
-            st.success(f"Submission {selected_id} deleted successfully!")
-            st.rerun()
-
-    
-    # --- Bulk Delete Partition Button (NEW FEATURE) ---
-    st.markdown("---")
-    
-    if st.button(f"⚠️ Delete ALL {len(records_df)} Submissions for {current_load_date or 'No Date Filter'}?", use_container_width=True, disabled=not modification_allowed):
-        if not modification_allowed:
-            # Should be disabled, but good to have a final check
-            st.error("Cannot delete all if 'Date partition' is blank.")
-            return
-
-        # 1. Determine the file path to the partition
-        part_dir = os.path.join(DATA_DIR, f"proposal_type={current_load_ptype}", f"dt={current_load_date}")
-        file_path = os.path.join(part_dir, "data.parquet")
-
-        # 2. Delete the physical file
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            
-            # 3. Clear session state to reflect the change
-            st.session_state.pop("records_df", None)
-            st.success(f"Successfully deleted ALL submissions and removed the partition file for **{current_load_date}**.")
-            
-            # 4. Rerun to refresh the page and show no data
-            st.rerun()
-        else:
-            st.warning(f"No partition file found at {file_path}. Nothing was deleted.")
-            
-    st.markdown("---")
 
 def load_records(proposal_type: str, date: str | None):
     base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
