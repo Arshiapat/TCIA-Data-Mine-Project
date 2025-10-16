@@ -1,0 +1,7 @@
+proposal_type: new_collection
+title: "Brain MRI Harmonization"
+pi_name: "Dr. Willow"
+contact_email: "willow@uni.edu"
+org_name: "North Lab"
+data_modalities: ["MR", "Genomics", "weird-probe"]
+short_abstract: "Study of harmonization across scanners."
