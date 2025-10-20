@@ -51,6 +51,12 @@ from email.mime.application import MIMEApplication
 import pandas as pd
 import streamlit as st
 
+# --- local package import shim (MUST be before other imports) ---
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Helpers for auto-fill
+from intake.form_utils import parse_uploaded, normalize_record, DEFAULTS
 
 
 # ----------------------------
@@ -83,6 +89,17 @@ if "admin_authed_until" not in st.session_state:
     st.session_state.admin_authed_until = 0
 if "admin_token" not in st.session_state:
     st.session_state.admin_token = None
+
+# Auto-fill state (what the upload populates)
+if "prefill" not in st.session_state:
+    st.session_state.prefill = {
+        "proposal_type": DEFAULTS.get("proposal_type", "new_collection"),
+        "email": "",
+        "dataset_title": "",
+        "dataset_description": "",
+        # add more mappings later if you want additional sections prefilling
+    }
+
 
 # Ensure data dir
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -283,23 +300,37 @@ def sidebar_nav():
 
 def basic_info_block():
     st.subheader("Basic Information")
-    email = st.text_input("Email *")
-    sci_poc = st.text_area("Provide a scientific point of contact *", placeholder="Name, email, phone")
-    tech_poc = st.text_area("Provide a technical point of contact *", placeholder="Name, email, phone")
-    legal_admin = st.text_area("Provide a legal/contracts administrator *", placeholder="Name, email")
-    time_constraints = st.text_area("Are there any time constraints associated with sharing your data set? *")
+    email = st.text_input(
+        "Email *",
+        value=st.session_state.prefill.get("email", ""),
+        key="email"
+    )
+    sci_poc = st.text_area("Provide a scientific point of contact *", placeholder="Name, email, phone", key="sci_poc")
+    tech_poc = st.text_area("Provide a technical point of contact *", placeholder="Name, email, phone", key="tech_poc")
+    legal_admin = st.text_area("Provide a legal/contracts administrator *", placeholder="Name, email", key="legal_admin")
+    time_constraints = st.text_area("Are there any time constraints associated with sharing your data set? *", key="time_constraints")
     return email, sci_poc, tech_poc, legal_admin, time_constraints
 
 
 def dataset_pub_block(include_nickname_required: bool):
     st.subheader("Dataset Publication")
-    title = st.text_input("Suggest a descriptive title for your dataset *")
+    title = st.text_input(
+        "Suggest a descriptive title for your dataset *",
+        value=st.session_state.prefill.get("dataset_title", ""),
+        key="dataset_title"
+    )
     nickname_label = "Suggest a shorter nickname for your dataset" + (" *" if include_nickname_required else "")
-    nickname = st.text_input(nickname_label, help="< 30 chars; letters, numbers, dashes")
-    authors = st.text_area("List the authors of this data set *", help="List as (FAMILY, GIVEN); include OrcIDs")
+    nickname = st.text_input(nickname_label, help="< 30 chars; letters, numbers, dashes", key="dataset_nickname")
+    authors = st.text_area("List the authors of this data set *", help="List as (FAMILY, GIVEN); include OrcIDs", key="authors")
     desc_label = "Provide a Dataset Description *"
-    description = st.text_area(desc_label, height=200)
+    description = st.text_area(
+        desc_label,
+        height=200,
+        value=st.session_state.prefill.get("dataset_description", ""),
+        key="dataset_description"
+    )
     return title, nickname, authors, description
+
 
 
 def data_collection_block():
@@ -384,6 +415,23 @@ def analysis_only_block():
         "reasons_other": reasons_other,
     }
 
+def autofill_section():
+    st.subheader("Load from file (optional)")
+    up = st.file_uploader("Upload JSON / CSV / YAML to auto-fill core fields",
+                          type=["json","csv","yml","yaml"])
+    if not up:
+        return
+    raw = parse_uploaded(up)
+    norm = normalize_record(raw)  # normalized keys: proposal_type, title, contact_email, short_abstract, etc.
+
+    # Map normalized keys into your app’s field names
+    st.session_state.prefill["proposal_type"] = norm.get("proposal_type", st.session_state.prefill["proposal_type"])
+    st.session_state.prefill["email"] = norm.get("contact_email", st.session_state.prefill["email"])
+    st.session_state.prefill["dataset_title"] = norm.get("title", st.session_state.prefill["dataset_title"])
+    st.session_state.prefill["dataset_description"] = norm.get("short_abstract", st.session_state.prefill["dataset_description"])
+
+    st.success("Loaded values from file. Review/edit the fields below before submitting.")
+
 
 # ----------------------------
 # Submit Page
@@ -392,12 +440,37 @@ def analysis_only_block():
 def submit_page():
     header()
 
-    # --- Type selector OUTSIDE the form so the UI re-renders immediately on change ---
-    proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=0)
+    # ---------- Upload → auto-fill (put this BEFORE the type select) ----------
+    if "prefill" not in st.session_state:
+        st.session_state.prefill = {
+            "proposal_type": "new_collection",
+            "email": "",
+            "dataset_title": "",
+            "dataset_description": "",
+        }
+
+    st.subheader("Load from file (optional)")
+    up = st.file_uploader("Upload JSON / CSV / YAML to auto-fill core fields",
+                          type=["json", "csv", "yml", "yaml"])
+    if up:
+        # uses your helpers (make sure you've imported them at the top)
+        raw = parse_uploaded(up)
+        norm = normalize_record(raw)
+        st.session_state.prefill["proposal_type"] = norm.get("proposal_type", st.session_state.prefill["proposal_type"])
+        st.session_state.prefill["email"] = norm.get("contact_email", st.session_state.prefill["email"])
+        st.session_state.prefill["dataset_title"] = norm.get("title", st.session_state.prefill["dataset_title"])
+        st.session_state.prefill["dataset_description"] = norm.get("short_abstract", st.session_state.prefill["dataset_description"])
+        st.success("Loaded values from file. Review/edit below before submitting.")
+    st.markdown("---")
+
+    # ---------- Type selector OUTSIDE the form so UI re-renders on change ----------
+    default_pt = st.session_state.prefill.get("proposal_type", "new_collection")
+    default_index = 0 if default_pt == "new_collection" else 1
+    proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=default_index)
     st.info(f"You are filling out the **{proposal_type}** proposal.")
     st.markdown("---")
 
-    # (honeypot stays outside or inside; keeping it outside is fine)
+    # (honeypot)
     st.markdown(
         "<div style='position:absolute;left:-10000px;' aria-hidden='true'>"
         "<input name='website' value='' />"
@@ -406,8 +479,10 @@ def submit_page():
     )
     honeypot = st.query_params.get("website", "") if hasattr(st, "query_params") else ""
 
+    # ---------- Form ----------
     with st.form("proposal_form", clear_on_submit=False):
-        # Shared sections for both forms
+        # NOTE: For auto-fill to populate these fields, use the updated versions
+        # of basic_info_block() and dataset_pub_block() that pass value=... from st.session_state.prefill
         email, sci_poc, tech_poc, legal_admin, time_constraints = basic_info_block()
         title, nickname, authors, description = dataset_pub_block(
             include_nickname_required=(proposal_type == "New Collection")
@@ -415,9 +490,9 @@ def submit_page():
 
         # Switch in the right question set based on selection
         if proposal_type == "New Collection":
-            details = data_collection_block()      # Form 1 fields
+            details = data_collection_block()
         else:
-            details = analysis_only_block()        # Form 2 fields
+            details = analysis_only_block()
 
         # Optional notifications
         st.markdown("---")
@@ -430,14 +505,14 @@ def submit_page():
     if not submitted:
         return
 
-    # --- cooldown ---
+    # ---------- Cooldown ----------
     now = time.time()
     if now - st.session_state.get("last_submit_ts", 0) < SUBMIT_COOLDOWN:
         st.warning("You're submitting too fast. Please wait a few seconds and try again.")
         return
     st.session_state["last_submit_ts"] = now
 
-    # --- validations (shared) ---
+    # ---------- Validations (shared) ----------
     errors = []
     if honeypot:
         errors.append("Spam detected.")
@@ -449,7 +524,6 @@ def submit_page():
         errors.append("Technical point of contact is required.")
     if not legal_admin.strip():
         errors.append("Legal/contracts administrator is required.")
-    # If you want parity with original Google Forms, require time constraints for New Collection only:
     if proposal_type == "New Collection" and not time_constraints.strip():
         errors.append("Time constraints field is required for New Collection.")
     if not title.strip():
@@ -457,14 +531,14 @@ def submit_page():
     if proposal_type == "New Collection":
         if not nickname.strip():
             errors.append("Dataset nickname is required for New Collection.")
-        elif not re.fullmatch(r"[A-Za-z0-9\-]{1,30}", nickname or ""):
+        elif not re.fullmatch(r"[A-Za-z0-9\\-]{1,30}", nickname or ""):
             errors.append("Nickname must be <30 chars and only letters, numbers, or dashes.")
     if not authors.strip():
         errors.append("Authors are required.")
     if not description.strip():
         errors.append("Dataset description is required.")
 
-    # --- per-type validations ---
+    # ---------- Per-type validations ----------
     if proposal_type == "New Collection":
         must = [
             (details["published_elsewhere"], "Published elsewhere details are required."),
@@ -498,10 +572,10 @@ def submit_page():
             errors.append(msg)
 
     if errors:
-        st.error("\n".join([f"• {e}" for e in errors]))
+        st.error("\\n".join([f"• {e}" for e in errors]))
         return
 
-    # --- build record & save ---
+    # ---------- Build record & save ----------
     submission_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
 
@@ -548,7 +622,6 @@ def submit_page():
 
     st.success("Submission received! Your Submission ID is: " + submission_id)
     st.download_button("Download Receipt (JSON)", json.dumps(record, indent=2), file_name=f"tcia_receipt_{submission_id}.json")
-
 
 # ----------------------------
 # Admin Page
