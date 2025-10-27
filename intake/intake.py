@@ -51,6 +51,8 @@ from email.mime.application import MIMEApplication
 import pandas as pd
 import streamlit as st
 
+
+
 # ----------------------------
 # Config & Utility
 # ----------------------------
@@ -390,25 +392,34 @@ def analysis_only_block():
 def submit_page():
     header()
 
+    # --- Type selector OUTSIDE the form so the UI re-renders immediately on change ---
+    proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=0)
+    st.info(f"You are filling out the **{proposal_type}** proposal.")
+    st.markdown("---")
+
+    # (honeypot stays outside or inside; keeping it outside is fine)
     st.markdown(
-        "<div style='position:absolute;left:-10000px;' aria-hidden='true'>\n        <input name='website' value='' />\n        </div>",
+        "<div style='position:absolute;left:-10000px;' aria-hidden='true'>"
+        "<input name='website' value='' />"
+        "</div>",
         unsafe_allow_html=True,
     )
-    # Honeypot value we read back via query params (best-effort)
     honeypot = st.query_params.get("website", "") if hasattr(st, "query_params") else ""
 
     with st.form("proposal_form", clear_on_submit=False):
-        proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=0)
-
+        # Shared sections for both forms
         email, sci_poc, tech_poc, legal_admin, time_constraints = basic_info_block()
-        title, nickname, authors, description = dataset_pub_block(include_nickname_required=(proposal_type=="New Collection"))
+        title, nickname, authors, description = dataset_pub_block(
+            include_nickname_required=(proposal_type == "New Collection")
+        )
 
+        # Switch in the right question set based on selection
         if proposal_type == "New Collection":
-            details = data_collection_block()
+            details = data_collection_block()      # Form 1 fields
         else:
-            details = analysis_only_block()
+            details = analysis_only_block()        # Form 2 fields
 
-        # Alerts config per submission (optional)
+        # Optional notifications
         st.markdown("---")
         st.subheader("Notification Options (optional)")
         alert_recipients = st.text_input("Recipient email(s) for alerts (comma-separated)")
@@ -416,135 +427,127 @@ def submit_page():
 
         submitted = st.form_submit_button("Submit Proposal", use_container_width=True)
 
-    if submitted:
-        # cooldown
-        now = time.time()
-        if now - st.session_state.last_submit_ts < SUBMIT_COOLDOWN:
-            st.warning("You're submitting too fast. Please wait a few seconds and try again.")
-            return
+    if not submitted:
+        return
 
-        st.session_state.last_submit_ts = now
+    # --- cooldown ---
+    now = time.time()
+    if now - st.session_state.get("last_submit_ts", 0) < SUBMIT_COOLDOWN:
+        st.warning("You're submitting too fast. Please wait a few seconds and try again.")
+        return
+    st.session_state["last_submit_ts"] = now
 
-        # validations
-        errors = []
-        if honeypot:
-            errors.append("Spam detected.")
-        if not valid_email(email):
-            errors.append("Valid Email is required.")
-        if not sci_poc.strip():
-            errors.append("Scientific point of contact is required.")
-        if not tech_poc.strip():
-            errors.append("Technical point of contact is required.")
-        if not legal_admin.strip():
-            errors.append("Legal/contracts administrator is required.")
-        if not time_constraints.strip():
-            errors.append("Time constraints field is required.")
-        if not title.strip():
-            errors.append("Dataset title is required.")
-        if proposal_type == "New Collection" and not nickname.strip():
+    # --- validations (shared) ---
+    errors = []
+    if honeypot:
+        errors.append("Spam detected.")
+    if not valid_email(email):
+        errors.append("Valid Email is required.")
+    if not sci_poc.strip():
+        errors.append("Scientific point of contact is required.")
+    if not tech_poc.strip():
+        errors.append("Technical point of contact is required.")
+    if not legal_admin.strip():
+        errors.append("Legal/contracts administrator is required.")
+    # If you want parity with original Google Forms, require time constraints for New Collection only:
+    if proposal_type == "New Collection" and not time_constraints.strip():
+        errors.append("Time constraints field is required for New Collection.")
+    if not title.strip():
+        errors.append("Dataset title is required.")
+    if proposal_type == "New Collection":
+        if not nickname.strip():
             errors.append("Dataset nickname is required for New Collection.")
-        if not authors.strip():
-            errors.append("Authors are required.")
-        if not description.strip():
-            errors.append("Dataset description is required.")
+        elif not re.fullmatch(r"[A-Za-z0-9\-]{1,30}", nickname or ""):
+            errors.append("Nickname must be <30 chars and only letters, numbers, or dashes.")
+    if not authors.strip():
+        errors.append("Authors are required.")
+    if not description.strip():
+        errors.append("Dataset description is required.")
 
-        # Additional requireds by type
-        if proposal_type == "New Collection":
-            must = [
-                (details["published_elsewhere"], "Published elsewhere details are required."),
-                (details["disease_site"], "Primary disease site is required."),
-                (details["histologic_dx"], "Histologic diagnosis is required."),
-                (details["image_types"], "At least one image type is required."),
-                (details["supporting_data"], "At least one supporting data type is required."),
-                (details["file_formats"], "File formats are required."),
-                (details["n_subjects"] >= 0, None),
-                (details["n_studies"], "Total studies/slides is required."),
-                (details["disk_space"], "Approximate disk space is required."),
-                (details["preprocessing"], "Preprocessing steps are required."),
-                (details["faces"], "Faces selection is required."),
-                (details["usage_policy"], "Usage policy selection is required."),
-                (details["acknowledgments"], "Acknowledgments are required."),
-                (details["why_publish"], "Reason to publish is required."),
-            ]
-            for val, msg in must:
-                if (isinstance(val, list) and len(val)==0) or (isinstance(val, str) and not val.strip()):
-                    if msg:
-                        errors.append(msg)
-        else:
-            must = [
-                (details["tcia_collections"], "TCIA collections analyzed are required."),
-                (details["derived_types"], "At least one derived data type is required."),
-                (details["n_patients"], "Patient/series totals are required."),
-                (details["disk_space"], "Approximate disk space is required."),
-                (details["have_records"], "Record knowledge selection is required."),
-                (details["file_formats"], "File formats are required."),
-                (details["acknowledgments"], "Acknowledgments are required."),
-                (details["reasons"], "At least one reason is required."),
-            ]
-            for val, msg in must:
-                if (isinstance(val, list) and len(val)==0) or (isinstance(val, str) and not val.strip()):
-                    if msg:
-                        errors.append(msg)
+    # --- per-type validations ---
+    if proposal_type == "New Collection":
+        must = [
+            (details["published_elsewhere"], "Published elsewhere details are required."),
+            (details["disease_site"], "Primary disease site is required."),
+            (details["histologic_dx"], "Histologic diagnosis is required."),
+            (details["image_types"], "At least one image type is required."),
+            (details["supporting_data"], "At least one supporting data type is required."),
+            (details["file_formats"], "File formats are required."),
+            (details["n_studies"], "Total studies/slides is required."),
+            (details["disk_space"], "Approximate disk space is required."),
+            (details["preprocessing"], "Preprocessing steps are required."),
+            (details["faces"], "Faces selection is required."),
+            (details["usage_policy"], "Usage policy selection is required."),
+            (details["acknowledgments"], "Acknowledgments are required."),
+            (details["why_publish"], "Reason to publish is required."),
+        ]
+    else:
+        must = [
+            (details["tcia_collections"], "TCIA collections analyzed are required."),
+            (details["derived_types"], "At least one derived data type is required."),
+            (details["n_patients"], "Patient/series totals are required."),
+            (details["disk_space"], "Approximate disk space is required."),
+            (details["have_records"], "Record knowledge selection is required."),
+            (details["file_formats"], "File formats are required."),
+            (details["acknowledgments"], "Acknowledgments are required."),
+            (details["reasons"], "At least one reason is required."),
+        ]
 
-        if errors:
-            st.error("\n".join([f"• {e}" for e in errors]))
-            return
+    for val, msg in must:
+        if (isinstance(val, list) and len(val) == 0) or (isinstance(val, str) and not val.strip()):
+            errors.append(msg)
 
-        submission_id = str(uuid.uuid4())
-        created_at = datetime.now(timezone.utc).isoformat()
+    if errors:
+        st.error("\n".join([f"• {e}" for e in errors]))
+        return
 
-        record = {
-            "submission_id": submission_id,
-            "created_at": created_at,
-            "proposal_type": proposal_type.replace(" ", "_").lower(),
-            "email": email.strip(),
-            "scientific_poc": sci_poc.strip(),
-            "technical_poc": tech_poc.strip(),
-            "legal_admin": legal_admin.strip(),
-            "time_constraints": time_constraints.strip(),
-            "dataset_title": title.strip(),
-            "dataset_nickname": nickname.strip(),
-            "authors": authors.strip(),
-            "dataset_description": description.strip(),
-            "client_ip": client_ip(),
-            "user_agent": st.session_state.get("user_agent", "unknown"),
-        }
-        # merge details
-        for k, v in details.items():
-            # normalize lists to json strings for Parquet compatibility
-            if isinstance(v, list):
-                record[k] = json.dumps(v)
-            else:
-                record[k] = v
+    # --- build record & save ---
+    submission_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
 
-        # persist
-        write_record(record["proposal_type"], record)
+    record = {
+        "submission_id": submission_id,
+        "created_at": created_at,
+        "proposal_type": proposal_type.replace(" ", "_").lower(),
+        "email": email.strip(),
+        "scientific_poc": sci_poc.strip(),
+        "technical_poc": tech_poc.strip(),
+        "legal_admin": legal_admin.strip(),
+        "time_constraints": time_constraints.strip(),
+        "dataset_title": title.strip(),
+        "dataset_nickname": nickname.strip(),
+        "authors": authors.strip(),
+        "dataset_description": description.strip(),
+        "client_ip": client_ip(),
+        "user_agent": st.session_state.get("user_agent", "unknown"),
+    }
+    for k, v in details.items():
+        record[k] = json.dumps(v) if isinstance(v, list) else v
 
-        # PDF receipt
-        pdf_bytes = render_pdf_receipt(record) or b""
+    write_record(record["proposal_type"], record)
 
-        # Alerts
-        recipients = [x.strip() for x in (alert_recipients or "").split(',') if x.strip() and valid_email(x.strip())]
-        if recipients:
-            send_email(
-                recipients,
-                subject=f"[TCIA] New {proposal_type} submission",
-                html_body=f"<p>New submission received.</p><pre>{json.dumps(record, indent=2)}</pre>",
-                attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
-            )
-        send_slack(f"New {proposal_type} submission: {submission_id}")
+    pdf_bytes = render_pdf_receipt(record) or b""
 
-        # Submitter receipt
-        if send_submitter_receipt and valid_email(record["email"]):
-            send_email(
-                [record["email"]],
-                subject=f"TCIA Submission Receipt – {submission_id}",
-                html_body=f"<p>Thank you for your submission.</p><pre>{json.dumps({k:v for k,v in record.items() if k not in ['client_ip','user_agent']}, indent=2)}</pre>",
-                attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
-            )
+    recipients = [x.strip() for x in (alert_recipients or "").split(',') if x.strip() and valid_email(x.strip())]
+    if recipients:
+        send_email(
+            recipients,
+            subject=f"[TCIA] New {proposal_type} submission",
+            html_body=f"<p>New submission received.</p><pre>{json.dumps(record, indent=2)}</pre>",
+            attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
+        )
+    send_slack(f"New {proposal_type} submission: {submission_id}")
 
-        st.success("Submission received! Your Submission ID is: " + submission_id)
-        st.download_button("Download Receipt (JSON)", json.dumps(record, indent=2), file_name=f"tcia_receipt_{submission_id}.json")
+    if send_submitter_receipt and valid_email(record["email"]):
+        send_email(
+            [record["email"]],
+            subject=f"TCIA Submission Receipt – {submission_id}",
+            html_body=f"<p>Thank you for your submission.</p><pre>{json.dumps({k:v for k,v in record.items() if k not in ['client_ip','user_agent']}, indent=2)}</pre>",
+            attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
+        )
+
+    st.success("Submission received! Your Submission ID is: " + submission_id)
+    st.download_button("Download Receipt (JSON)", json.dumps(record, indent=2), file_name=f"tcia_receipt_{submission_id}.json")
 
 
 # ----------------------------
@@ -650,3 +653,5 @@ else:
 # fastparquet==2024.5.0  # fallback parquet engine
 # reportlab==4.2.2
 # requests==2.32.3  # optional, for Slack
+
+#git push origin -u feature/streamlit-parquet-intake
