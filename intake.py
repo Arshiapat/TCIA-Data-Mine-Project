@@ -1,47 +1,35 @@
 def update_record_fields(proposal_type: str, submission_id: str, updates: dict) -> bool:
-    """Find the parquet partition file that contains submission_id for this proposal_type
-    and update its fields with the updates dict. Returns True if an update occurred."""
-    base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
-    if not os.path.isdir(base):
-        return False
+    """Update arbitrary fields for a submission in the SQLite DB. Returns True if updated."""
+    init_db()
+    conn = sqlite3.connect(DATA_DB)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT payload FROM submissions WHERE submission_id=? AND proposal_type=?", (submission_id, proposal_type))
+        row = cur.fetchone()
+        if not row:
+            return False
+        try:
+            payload = json.loads(row[0])
+        except Exception:
+            payload = {}
 
-    import sys
-    print(f"[DEBUG] Searching for submission_id={submission_id} in {base}", file=sys.stderr)
-    found = False
-    for root, _, files in os.walk(base):
-        for f in files:
-            if not f.endswith(".parquet"):
-                continue
-            p = os.path.join(root, f)
-            print(f"[DEBUG] Checking file: {p}", file=sys.stderr)
-            try:
-                df = pd.read_parquet(p, engine=parquet_engine())
-            except Exception as e:
-                print(f"[DEBUG] Failed to read {p}: {e}", file=sys.stderr)
-                continue
-            if "submission_id" not in df.columns:
-                print(f"[DEBUG] No submission_id column in {p}", file=sys.stderr)
-                continue
-            mask = df["submission_id"] == submission_id
-            if mask.any():
-                found = True
-                print(f"[DEBUG] Found submission_id in {p}", file=sys.stderr)
-                for k, v in updates.items():
-                    # Convert lists/dicts to JSON string for Parquet compatibility
-                    if isinstance(v, (list, dict)):
-                        import json
-                        v = json.dumps(v)
-                    df.loc[mask, k] = v
-                try:
-                    df.to_parquet(p, engine=parquet_engine(), index=False)
-                    print(f"[DEBUG] Successfully updated {p}", file=sys.stderr)
-                    return True
-                except Exception as e:
-                    print(f"[DEBUG] Failed to write {p}: {e}", file=sys.stderr)
-                    return False
-    if not found:
-        print(f"[DEBUG] submission_id={submission_id} not found in any partition for {proposal_type}", file=sys.stderr)
-    return False
+        # apply updates (convert lists/dicts to JSON strings for backward compatibility)
+        for k, v in updates.items():
+            if isinstance(v, (list, dict)):
+                payload[k] = json.dumps(v)
+            else:
+                payload[k] = v
+
+        # ensure proposal_status column mirrors payload
+        proposal_status = payload.get("proposal_status", "New")
+        cur.execute(
+            "UPDATE submissions SET payload=?, proposal_status=? WHERE submission_id=?",
+            (json.dumps(payload), proposal_status, submission_id),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
 # """
 # TCIA Unified Proposal – Streamlit App
 
@@ -94,12 +82,15 @@ from email.mime.application import MIMEApplication
 
 import pandas as pd
 import streamlit as st
+import sqlite3
+import tempfile
 
 # ----------------------------
 # Config & Utility
 # ----------------------------
 APP_TITLE = "TCIA Proposal Submissions"
 DATA_DIR = os.getenv("DATA_DIR", "./data/parquet")
+DATA_DB = os.getenv("DATA_DB", os.path.join(DATA_DIR, "submissions.db"))
 TOKEN_SECRET = os.getenv("TOKEN_SECRET", "change-me")
 ADMIN_PIN = os.getenv("ADMIN_PIN", "123456")
 ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.getenv("ADMIN_IP_ALLOWLIST", "").split(',') if ip.strip()]
@@ -128,6 +119,28 @@ if "admin_token" not in st.session_state:
 
 # Ensure data dir
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# Ensure SQLite DB exists and has the required table. We store a JSON payload per submission
+def init_db():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    conn = sqlite3.connect(DATA_DB)
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS submissions (
+                submission_id TEXT PRIMARY KEY,
+                proposal_type TEXT,
+                created_at TEXT,
+                proposal_status TEXT,
+                payload TEXT
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+init_db()
 
 # ----------------------------
 # Controlled vocab (from user paste)
@@ -209,52 +222,44 @@ def parquet_engine() -> str:
 # ----------------------------
 
 def write_record(proposal_type: str, record: dict):
-    dt = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    part_dir = os.path.join(DATA_DIR, f"proposal_type={proposal_type}", f"dt={dt}")
-    os.makedirs(part_dir, exist_ok=True)
-    file_path = os.path.join(part_dir, "data.parquet")
-    df_new = pd.DataFrame([record])
-    if os.path.exists(file_path):
-        df_existing = pd.read_parquet(file_path, engine=parquet_engine())
-        df_all = pd.concat([df_existing, df_new], ignore_index=True)
-        df_all.to_parquet(file_path, engine=parquet_engine(), index=False)
-    else:
-        df_new.to_parquet(file_path, engine=parquet_engine(), index=False)
+    """Persist a submission record into the SQLite DB."""
+    init_db()
+    conn = sqlite3.connect(DATA_DB)
+    try:
+        cur = conn.cursor()
+        payload = json.dumps(record)
+        cur.execute(
+            "INSERT OR REPLACE INTO submissions (submission_id, proposal_type, created_at, proposal_status, payload) VALUES (?, ?, ?, ?, ?)",
+            (record.get("submission_id"), proposal_type, record.get("created_at"), record.get("proposal_status", "New"), payload),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def update_record_status(proposal_type: str, submission_id: str, new_status: str) -> bool:
-    """Find the parquet partition file that contains submission_id for this proposal_type
-    and update its proposal_status field. Returns True if an update occurred."""
-    base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
-    if not os.path.isdir(base):
-        return False
-
-    updated = False
-    for root, _, files in os.walk(base):
-        for f in files:
-            if not f.endswith(".parquet"):
-                continue
-            p = os.path.join(root, f)
-            try:
-                df = pd.read_parquet(p, engine=parquet_engine())
-            except Exception:
-                continue
-            if "submission_id" not in df.columns:
-                continue
-            mask = df["submission_id"] == submission_id
-            if mask.any():
-                # ensure column exists
-                if "proposal_status" not in df.columns:
-                    df["proposal_status"] = "New"
-                df.loc[mask, "proposal_status"] = new_status
-                try:
-                    df.to_parquet(p, engine=parquet_engine(), index=False)
-                    updated = True
-                except Exception:
-                    # if write fails, try to continue and report false
-                    return False
-                return True
-    return updated
+    """Update the proposal_status for a submission in the DB."""
+    init_db()
+    conn = sqlite3.connect(DATA_DB)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT payload FROM submissions WHERE submission_id=? AND proposal_type=?", (submission_id, proposal_type))
+        row = cur.fetchone()
+        if not row:
+            return False
+        try:
+            payload = json.loads(row[0])
+        except Exception:
+            payload = {}
+        payload["proposal_status"] = new_status
+        cur.execute(
+            "UPDATE submissions SET payload=?, proposal_status=? WHERE submission_id=?",
+            (json.dumps(payload), new_status, submission_id),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
 
 
 # ----------------------------
@@ -701,6 +706,53 @@ def admin_page():
         except Exception as e:
             st.info("Parquet download not available: " + str(e))
 
+        # Provide a SQLite download of the currently loaded records. We write a temp DB containing
+        # the same `submissions` table and rows, then stream it to the user.
+        try:
+            tmpf = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+            tmp_path = tmpf.name
+            tmpf.close()
+            conn_tmp = sqlite3.connect(tmp_path)
+            try:
+                cur = conn_tmp.cursor()
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS submissions (
+                        submission_id TEXT PRIMARY KEY,
+                        proposal_type TEXT,
+                        created_at TEXT,
+                        proposal_status TEXT,
+                        payload TEXT
+                    )
+                    """
+                )
+                # insert rows from DataFrame
+                for _, row in records_df.iterrows():
+                    rec = row.to_dict()
+                    payload = json.dumps(rec, default=str)
+                    cur.execute(
+                        "INSERT OR REPLACE INTO submissions (submission_id, proposal_type, created_at, proposal_status, payload) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            rec.get("submission_id"),
+                            ptype,
+                            rec.get("created_at"),
+                            rec.get("proposal_status", "New"),
+                            payload,
+                        ),
+                    )
+                conn_tmp.commit()
+            finally:
+                conn_tmp.close()
+            with open(tmp_path, "rb") as f:
+                db_bytes = f.read()
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+            st.download_button("Download SQLite", db_bytes, file_name=f"tcia_{ptype}_{date or 'all'}.db", mime="application/x-sqlite3")
+        except Exception as e:
+            st.info("SQLite download not available: " + str(e))
+
         st.markdown("---")
         st.subheader("Edit Submission Response")
         sid = st.selectbox("Select Submission ID", options=records_df["submission_id"].tolist(), key="select_sid")
@@ -727,31 +779,32 @@ def admin_page():
 
 
 def load_records(proposal_type: str, date: str | None):
-    base = os.path.join(DATA_DIR, f"proposal_type={proposal_type}")
-    if not os.path.isdir(base):
+    """Load submissions from SQLite. Returns a pandas DataFrame or None."""
+    init_db()
+    conn = sqlite3.connect(DATA_DB)
+    try:
+        cur = conn.cursor()
+        params = [proposal_type]
+        sql = "SELECT payload FROM submissions WHERE proposal_type=?"
+        if date:
+            # filter by created_at date prefix
+            sql = "SELECT payload FROM submissions WHERE proposal_type=? AND created_at LIKE ?"
+            params.append(f"{date}%")
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        records = []
+        for (payload_txt,) in rows:
+            try:
+                rec = json.loads(payload_txt)
+            except Exception:
+                # fallback: skip malformed
+                continue
+            records.append(rec)
+        if records:
+            return pd.DataFrame(records)
         return None
-
-    paths = []
-    if date:
-        p = os.path.join(base, f"dt={date}", "data.parquet")
-        if os.path.exists(p):
-            paths.append(p)
-    else:
-        # all partitions
-        for root, _, files in os.walk(base):
-            for f in files:
-                if f.endswith(".parquet"):
-                    paths.append(os.path.join(root, f))
-
-    dfs = []
-    for p in paths:
-        try:
-            dfs.append(pd.read_parquet(p, engine=parquet_engine()))
-        except Exception:
-            pass
-    if dfs:
-        return pd.concat(dfs, ignore_index=True)
-    return None
+    finally:
+        conn.close()
 
 
 # ----------------------------
