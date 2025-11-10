@@ -728,3 +728,5 @@ else:
 # requests==2.32.3  # optional, for Slack
 
 #git push origin -u feature/streamlit-parquet-intake
+
+#We should agree on an input file to autofill, so that you know what you're getting from both groups when you're populating. ANd, so thta things do not get too complicated
