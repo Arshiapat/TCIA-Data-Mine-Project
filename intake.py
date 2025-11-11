@@ -1,69 +1,17 @@
-def update_record_fields(proposal_type: str, submission_id: str, updates: dict) -> bool:
-    """Update arbitrary fields for a submission in the SQLite DB. Returns True if updated."""
-    init_db()
-    conn = sqlite3.connect(DATA_DB)
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT payload FROM submissions WHERE submission_id=? AND proposal_type=?", (submission_id, proposal_type))
-        row = cur.fetchone()
-        if not row:
-            return False
-        try:
-            payload = json.loads(row[0])
-        except Exception:
-            payload = {}
+"""
+TCIA Unified Proposal – Streamlit App (SQLite-backed)
 
-        # apply updates (convert lists/dicts to JSON strings for backward compatibility)
-        for k, v in updates.items():
-            if isinstance(v, (list, dict)):
-                payload[k] = json.dumps(v)
-            else:
-                payload[k] = v
+Restored full submission form with validation. Submissions are stored in
+`data/submissions.db` (SQLite) with one column per form field. Admin view
+includes filters and side-by-side CSV + .db download buttons.
 
-        # ensure proposal_status column mirrors payload
-        proposal_status = payload.get("proposal_status", "New")
-        cur.execute(
-            "UPDATE submissions SET payload=?, proposal_status=? WHERE submission_id=?",
-            (json.dumps(payload), proposal_status, submission_id),
-        )
-        conn.commit()
-        return True
-    finally:
-        conn.close()
-# """
-# TCIA Unified Proposal – Streamlit App
+This version intentionally omits email/Slack/PDF receipt logic — it keeps
+only the form, validation, and database storage as requested.
 
-# Features
-# - Public submission (no login) with required-field validation
-# - Single app for two proposal types: New Collection Proposal, Analysis Results Proposal
-# - Controlled vocab for multi-select fields from user's spec (with "Other" text boxes)
-# - Append-only Parquet dataset partitioned by proposal_type & dt=YYYY-MM-DD
-# - UUID + created_at, client IP (best-effort) and user agent snapshot
-# - Basic abuse protection: honeypot, per-session cooldown, simple request throttle
-# - Admin reviewer view protected by PIN + time-limited signed token (HMAC)
-# - Optional alerts: SMTP email + Slack webhook (env-driven)
-# - Optional PDF receipt (ReportLab) for submitter (env-driven)
-# - Streamlit Community Cloud friendly (local file storage)
-
-# Env (.streamlit/secrets.toml or OS env)
-# - DATA_DIR = "./data/parquet"
-# - ADMIN_PIN = "123456"
-# - ADMIN_IP_ALLOWLIST = ""  # comma-separated (optional), e.g. "1.2.3.4,5.6.7.8"
-# - TOKEN_SECRET = "change-me"
-# - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (optional)
-# - EMAIL_FROM_ADDR = "johntuck4234@gmail.com"  # testing default
-# - EMAIL_FROM_NAME = "TCIA Submissions"
-# - SLACK_WEBHOOK_URL (optional)
-# - BRAND_LOGO_URL (optional, used in emails/PDF)
-
-# Run locally
-# - pip install -r requirements.txt
-# - streamlit run app.py
-
-# Deploy: Streamlit Community Cloud
-# - Add these env vars in the app settings → Secrets.
-# - Ensure the app has write access to ./data/ (default in Community Cloud ephemeral FS).
-# """
+Run:
+- pip install -r requirements.txt (streamlit, pandas)
+- streamlit run intake.py
+"""
 
 import os
 import re
@@ -72,39 +20,22 @@ import hmac
 import time
 import json
 import uuid
-import smtplib
 import hashlib
-import textwrap
-from datetime import datetime, timezone, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
+import sqlite3
+from datetime import datetime, timezone
 
 import pandas as pd
 import streamlit as st
-import sqlite3
-import tempfile
 
 # ----------------------------
 # Config & Utility
 # ----------------------------
 APP_TITLE = "TCIA Proposal Submissions"
-DATA_DIR = os.getenv("DATA_DIR", "./data/parquet")
-DATA_DB = os.getenv("DATA_DB", os.path.join(DATA_DIR, "submissions.db"))
+DB_DIR = "data"
+DB_PATH = os.path.join(DB_DIR, "submissions.db")
 TOKEN_SECRET = os.getenv("TOKEN_SECRET", "change-me")
 ADMIN_PIN = os.getenv("ADMIN_PIN", "123456")
-ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.getenv("ADMIN_IP_ALLOWLIST", "").split(',') if ip.strip()]
 
-EMAIL_FROM_ADDR = os.getenv("EMAIL_FROM_ADDR", "johntuck4234@gmail.com")
-EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "TCIA Submissions")
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASS = os.getenv("SMTP_PASS")
-SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
-BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL")
-
-# Cooldowns / throttling (seconds)
 SUBMIT_COOLDOWN = 20
 
 st.set_page_config(page_title=APP_TITLE, page_icon="📤", layout="wide")
@@ -117,33 +48,11 @@ if "admin_authed_until" not in st.session_state:
 if "admin_token" not in st.session_state:
     st.session_state.admin_token = None
 
-# Ensure data dir
-os.makedirs(DATA_DIR, exist_ok=True)
-
-# Ensure SQLite DB exists and has the required table. We store a JSON payload per submission
-def init_db():
-    os.makedirs(DATA_DIR, exist_ok=True)
-    conn = sqlite3.connect(DATA_DB)
-    try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS submissions (
-                submission_id TEXT PRIMARY KEY,
-                proposal_type TEXT,
-                created_at TEXT,
-                proposal_status TEXT,
-                payload TEXT
-            )
-            """
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-init_db()
+# Ensure data dir exists
+os.makedirs(DB_DIR, exist_ok=True)
 
 # ----------------------------
-# Controlled vocab (from user paste)
+# Controlled vocab
 # ----------------------------
 IMAGE_TYPES = [
     "MR","CT","PET","PET-CT","PET-MR","Mammograms","Ultrasound","Xray",
@@ -170,17 +79,6 @@ PUBLISH_REASONS = [
     "To facilitate a challenge competition"
 ]
 
-# Proposal workflow statuses
-PROPOSAL_STATUSES = [
-    "New",
-    "Preliminary Review",
-    "Ready for AG Presentation",
-    "Awaiting answers to AG questions",
-    "Accepted",
-    "Rejected",
-    "Data Submission Agreement",
-]
-
 # ----------------------------
 # Validators
 # ----------------------------
@@ -190,148 +88,18 @@ ORCID_RE = re.compile(r"^(\d{4}-){3}\d{3}[\dX]$")
 
 
 def valid_email(x: str) -> bool:
-    return bool(EMAIL_RE.match(x.strip())) if x else False
+    return bool(x and EMAIL_RE.match(x.strip()))
 
 
 def valid_phone(x: str) -> bool:
-    return bool(PHONE_RE.match(x.strip())) if x else False
+    return bool(x and PHONE_RE.match(x.strip()))
 
 
 def extract_orcids(text: str) -> list:
     # naive capture of ORCIDs in a free text list
+    if not text:
+        return []
     return ORCID_RE.findall(text)
-
-# ----------------------------
-# Parquet engine helper (PyArrow preferred, fallback to Fastparquet)
-# ----------------------------
-
-def parquet_engine() -> str:
-    """Return pandas parquet engine ('pyarrow' or 'fastparquet'); error if neither installed."""
-    try:
-        import pyarrow  # noqa: F401
-        return "pyarrow"
-    except Exception:
-        try:
-            import fastparquet  # noqa: F401
-            return "fastparquet"
-        except Exception as e:
-            raise RuntimeError("Install either 'pyarrow' or 'fastparquet' to use Parquet.") from e
-
-# ----------------------------
-# Storage: append-only parquet dataset
-# ----------------------------
-
-def write_record(proposal_type: str, record: dict):
-    """Persist a submission record into the SQLite DB."""
-    init_db()
-    conn = sqlite3.connect(DATA_DB)
-    try:
-        cur = conn.cursor()
-        payload = json.dumps(record)
-        cur.execute(
-            "INSERT OR REPLACE INTO submissions (submission_id, proposal_type, created_at, proposal_status, payload) VALUES (?, ?, ?, ?, ?)",
-            (record.get("submission_id"), proposal_type, record.get("created_at"), record.get("proposal_status", "New"), payload),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def update_record_status(proposal_type: str, submission_id: str, new_status: str) -> bool:
-    """Update the proposal_status for a submission in the DB."""
-    init_db()
-    conn = sqlite3.connect(DATA_DB)
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT payload FROM submissions WHERE submission_id=? AND proposal_type=?", (submission_id, proposal_type))
-        row = cur.fetchone()
-        if not row:
-            return False
-        try:
-            payload = json.loads(row[0])
-        except Exception:
-            payload = {}
-        payload["proposal_status"] = new_status
-        cur.execute(
-            "UPDATE submissions SET payload=?, proposal_status=? WHERE submission_id=?",
-            (json.dumps(payload), new_status, submission_id),
-        )
-        conn.commit()
-        return True
-    finally:
-        conn.close()
-
-
-# ----------------------------
-# Alerts (optional)
-# ----------------------------
-
-def send_slack(message: str):
-    if not SLACK_WEBHOOK_URL:
-        return
-    try:
-        import requests
-        requests.post(SLACK_WEBHOOK_URL, json={"text": message}, timeout=6)
-    except Exception:
-        pass
-
-
-def send_email(to_addrs: list[str], subject: str, html_body: str, attachments: list[tuple[str, bytes]] | None = None):
-    if not SMTP_HOST or not EMAIL_FROM_ADDR:
-        return
-    msg = MIMEMultipart()
-    msg["From"] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM_ADDR}>"
-    msg["To"] = ", ".join(to_addrs)
-    msg["Subject"] = subject
-    msg.attach(MIMEText(html_body, "html"))
-
-    for name, data in (attachments or []):
-        part = MIMEApplication(data, Name=name)
-        part["Content-Disposition"] = f'attachment; filename="{name}"'
-        msg.attach(part)
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-        s.starttls()
-        if SMTP_USER and SMTP_PASS:
-            s.login(SMTP_USER, SMTP_PASS)
-        s.sendmail(EMAIL_FROM_ADDR, to_addrs, msg.as_string())
-
-
-# ----------------------------
-# PDF receipt (optional)
-# ----------------------------
-
-def render_pdf_receipt(record: dict) -> bytes | None:
-    try:
-        from reportlab.lib.pagesizes import LETTER
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.units import inch
-        buf = io.BytesIO()
-        c = canvas.Canvas(buf, pagesize=LETTER)
-        width, height = LETTER
-        y = height - 1*inch
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(1*inch, y, "TCIA Proposal Submission Receipt")
-        y -= 0.3*inch
-        c.setFont("Helvetica", 10)
-        c.drawString(1*inch, y, f"Submission ID: {record['submission_id']}")
-        y -= 0.2*inch
-        c.drawString(1*inch, y, f"Type: {record['proposal_type']}")
-        y -= 0.2*inch
-        c.drawString(1*inch, y, f"Created At (UTC): {record['created_at']}")
-        y -= 0.3*inch
-        wrap = textwrap.wrap(f"Title: {record.get('dataset_title','')}", width=90)
-        for line in wrap:
-            c.drawString(1*inch, y, line); y -= 0.18*inch
-        y -= 0.1*inch
-        wrap = textwrap.wrap(f"Email: {record.get('email','')}", width=90)
-        for line in wrap:
-            c.drawString(1*inch, y, line); y -= 0.18*inch
-        c.showPage(); c.save()
-        return buf.getvalue()
-    except Exception:
-        return None
-
 
 # ----------------------------
 # Security helpers (Admin)
@@ -357,9 +125,128 @@ def verify_token(token: str) -> bool:
 
 
 def client_ip() -> str:
-    # Streamlit Cloud may not expose IP; allow forwarding headers if proxied
     return st.session_state.get("client_ip", "unknown")
 
+# ----------------------------
+# Database: init & helpers
+# ----------------------------
+# Full column list mirroring the original form fields
+COLUMNS = {
+    "submission_id": "TEXT PRIMARY KEY",
+    "created_at": "TEXT",
+    "proposal_type": "TEXT",
+    "email": "TEXT",
+    "scientific_poc": "TEXT",
+    "technical_poc": "TEXT",
+    "legal_admin": "TEXT",
+    "time_constraints": "TEXT",
+    "dataset_title": "TEXT",
+    "dataset_nickname": "TEXT",
+    "authors": "TEXT",
+    "dataset_description": "TEXT",
+    "client_ip": "TEXT",
+    "user_agent": "TEXT",
+
+    # data collection
+    "published_elsewhere": "TEXT",
+    "disease_site": "TEXT",
+    "histologic_dx": "TEXT",
+    "image_types": "TEXT",
+    "image_types_other": "TEXT",
+    "supporting_data": "TEXT",
+    "supporting_data_other": "TEXT",
+    "file_formats": "TEXT",
+    "n_subjects": "INTEGER",
+    "n_studies": "TEXT",
+    "disk_space": "TEXT",
+    "preprocessing": "TEXT",
+    "faces": "TEXT",
+    "usage_policy": "TEXT",
+    "usage_policy_other": "TEXT",
+    "dataset_publications": "TEXT",
+    "additional_publications": "TEXT",
+    "acknowledgments": "TEXT",
+    "why_publish": "TEXT",
+
+    # analysis-only
+    "tcia_collections": "TEXT",
+    "derived_types": "TEXT",
+    "derived_other": "TEXT",
+    "n_patients": "TEXT",
+    "have_records": "TEXT",
+    "primary_citation": "TEXT",
+    "extra_pubs": "TEXT",
+    "reasons": "TEXT",
+    "reasons_other": "TEXT",
+}
+
+
+def init_db(path: str = DB_PATH):
+    cols_sql = ",\n    ".join([f"{k} {v}" for k, v in COLUMNS.items()])
+    create_sql = f"CREATE TABLE IF NOT EXISTS submissions (\n    {cols_sql}\n);"
+    conn = sqlite3.connect(path, timeout=20)
+    try:
+        cur = conn.cursor()
+        cur.execute(create_sql)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+
+def insert_submission(record: dict, path: str = DB_PATH):
+    # normalize and map values
+    norm = {}
+    for k in COLUMNS.keys():
+        v = record.get(k)
+        if isinstance(v, list):
+            norm[k] = json.dumps(v)
+        elif v is None:
+            norm[k] = None
+        else:
+            if k == "n_subjects":
+                try:
+                    norm[k] = int(v) if v != "" and v is not None else None
+                except Exception:
+                    norm[k] = None
+            else:
+                norm[k] = str(v) if v is not None else None
+
+    cols = ", ".join([k for k in COLUMNS.keys()])
+    placeholders = ", ".join(["?" for _ in COLUMNS.keys()])
+    values = [norm[k] for k in COLUMNS.keys()]
+
+    conn = sqlite3.connect(path, timeout=20)
+    try:
+        cur = conn.cursor()
+        cur.execute(f"INSERT INTO submissions ({cols}) VALUES ({placeholders})", values)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def query_submissions(proposal_type: str | None = None, date: str | None = None) -> pd.DataFrame:
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        q = "SELECT * FROM submissions"
+        filters = []
+        params = []
+        if proposal_type:
+            filters.append("proposal_type = ?")
+            params.append(proposal_type)
+        if date:
+            filters.append("created_at LIKE ?")
+            params.append(f"{date}%")
+        if filters:
+            q += " WHERE " + " AND ".join(filters)
+        q += " ORDER BY created_at DESC"
+        df = pd.read_sql_query(q, conn, params=params)
+        return df
+    finally:
+        conn.close()
+
+# Initialize DB
+init_db()
 
 # ----------------------------
 # UI Components
@@ -477,7 +364,6 @@ def analysis_only_block():
         "reasons_other": reasons_other,
     }
 
-
 # ----------------------------
 # Submit Page
 # ----------------------------
@@ -485,11 +371,11 @@ def analysis_only_block():
 def submit_page():
     header()
 
+    # Honeypot value we read back via query params (best-effort)
     st.markdown(
         "<div style='position:absolute;left:-10000px;' aria-hidden='true'>\n        <input name='website' value='' />\n        </div>",
         unsafe_allow_html=True,
     )
-    # Honeypot value we read back via query params (best-effort)
     honeypot = st.query_params.get("website", "") if hasattr(st, "query_params") else ""
 
     with st.form("proposal_form", clear_on_submit=False):
@@ -503,7 +389,7 @@ def submit_page():
         else:
             details = analysis_only_block()
 
-        # Alerts config per submission (optional)
+        # Alerts config per submission (removed alert wiring, UI left optional in case desired later)
         st.markdown("---")
         st.subheader("Notification Options (optional)")
         alert_recipients = st.text_input("Recipient email(s) for alerts (comma-separated)")
@@ -592,7 +478,6 @@ def submit_page():
             "submission_id": submission_id,
             "created_at": created_at,
             "proposal_type": proposal_type.replace(" ", "_").lower(),
-            "proposal_status": "New",
             "email": email.strip(),
             "scientific_poc": sci_poc.strip(),
             "technical_poc": tech_poc.strip(),
@@ -607,37 +492,10 @@ def submit_page():
         }
         # merge details
         for k, v in details.items():
-            # normalize lists to json strings for Parquet compatibility
-            if isinstance(v, list):
-                record[k] = json.dumps(v)
-            else:
-                record[k] = v
+            record[k] = v
 
-        # persist
-        write_record(record["proposal_type"], record)
-
-        # PDF receipt
-        pdf_bytes = render_pdf_receipt(record) or b""
-
-        # Alerts
-        recipients = [x.strip() for x in (alert_recipients or "").split(',') if x.strip() and valid_email(x.strip())]
-        if recipients:
-            send_email(
-                recipients,
-                subject=f"[TCIA] New {proposal_type} submission",
-                html_body=f"<p>New submission received.</p><pre>{json.dumps(record, indent=2)}</pre>",
-                attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
-            )
-        send_slack(f"New {proposal_type} submission: {submission_id}")
-
-        # Submitter receipt
-        if send_submitter_receipt and valid_email(record["email"]):
-            send_email(
-                [record["email"]],
-                subject=f"TCIA Submission Receipt – {submission_id}",
-                html_body=f"<p>Thank you for your submission.</p><pre>{json.dumps({k:v for k,v in record.items() if k not in ['client_ip','user_agent']}, indent=2)}</pre>",
-                attachments=[("receipt.pdf", pdf_bytes)] if pdf_bytes else None,
-            )
+        # persist to sqlite
+        insert_submission(record)
 
         st.success("Submission received! Your Submission ID is: " + submission_id)
         st.download_button("Download Receipt (JSON)", json.dumps(record, indent=2), file_name=f"tcia_receipt_{submission_id}.json")
@@ -650,14 +508,6 @@ def submit_page():
 def admin_page():
     header()
     st.subheader("Admin / Reviewer Portal")
-
-    # IP allowlist check (best-effort; often not available on Streamlit Cloud)
-    if ADMIN_IP_ALLOWLIST:
-        # Placeholder hint; real client IP capture would need a backend
-        ip = client_ip()
-        if ip not in ADMIN_IP_ALLOWLIST:
-            st.error("Your IP is not allowlisted.")
-            return
 
     col1, col2 = st.columns(2)
     with col1:
@@ -678,133 +528,29 @@ def admin_page():
         st.info("Enter a valid PIN or token to proceed.")
         return
 
-    # Controls
     st.markdown("---")
-    ptype = st.selectbox("Proposal Type", ["new_collection", "analysis_results"], index=0)
+    ptype = st.selectbox("Proposal Type", ["", "new_collection", "analysis_results"], index=0)
     date = st.text_input("Date partition (YYYY-MM-DD) or leave blank for all", value="")
 
-    # Load submissions and store in session_state
     if st.button("Load Submissions", use_container_width=True):
-        records_df = load_records(ptype, date)
-        if records_df is not None and not records_df.empty:
-            if "proposal_status" not in records_df.columns:
-                records_df["proposal_status"] = "New"
-            st.session_state["records_df"] = records_df
+        records_df = query_submissions(ptype if ptype else None, date if date else None)
+        if records_df is None or records_df.empty:
+            st.warning("No submissions found for the selected filters.")
         else:
-            st.session_state["records_df"] = None
-
-    # Show submissions if loaded
-    records_df = st.session_state.get("records_df", None)
-    if records_df is not None:
-        st.dataframe(records_df, use_container_width=True)
-        csv = records_df.to_csv(index=False).encode()
-        st.download_button("Download CSV", csv, file_name=f"tcia_{ptype}_{date or 'all'}.csv")
-        try:
-            buf = io.BytesIO()
-            records_df.to_parquet(buf, engine=parquet_engine(), index=False)
-            st.download_button("Download Parquet", buf.getvalue(), file_name=f"tcia_{ptype}_{date or 'all'}.parquet")
-        except Exception as e:
-            st.info("Parquet download not available: " + str(e))
-
-        # Provide a SQLite download of the currently loaded records. We write a temp DB containing
-        # the same `submissions` table and rows, then stream it to the user.
-        try:
-            tmpf = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-            tmp_path = tmpf.name
-            tmpf.close()
-            conn_tmp = sqlite3.connect(tmp_path)
-            try:
-                cur = conn_tmp.cursor()
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS submissions (
-                        submission_id TEXT PRIMARY KEY,
-                        proposal_type TEXT,
-                        created_at TEXT,
-                        proposal_status TEXT,
-                        payload TEXT
-                    )
-                    """
+            st.dataframe(records_df, use_container_width=True)
+            colA, colB = st.columns(2)
+            with colA:
+                csv = records_df.to_csv(index=False).encode()
+                st.download_button("Download CSV", csv, file_name=f"tcia_{ptype or 'all'}_{date or 'all'}.csv")
+            with colB:
+                with open(DB_PATH, "rb") as f:
+                    db_bytes = f.read()
+                st.download_button(
+                    "Download Full Database (.db)",
+                    db_bytes,
+                    file_name="submissions.db",
+                    mime="application/octet-stream",
                 )
-                # insert rows from DataFrame
-                for _, row in records_df.iterrows():
-                    rec = row.to_dict()
-                    payload = json.dumps(rec, default=str)
-                    cur.execute(
-                        "INSERT OR REPLACE INTO submissions (submission_id, proposal_type, created_at, proposal_status, payload) VALUES (?, ?, ?, ?, ?)",
-                        (
-                            rec.get("submission_id"),
-                            ptype,
-                            rec.get("created_at"),
-                            rec.get("proposal_status", "New"),
-                            payload,
-                        ),
-                    )
-                conn_tmp.commit()
-            finally:
-                conn_tmp.close()
-            with open(tmp_path, "rb") as f:
-                db_bytes = f.read()
-            try:
-                os.remove(tmp_path)
-            except Exception:
-                pass
-            st.download_button("Download SQLite", db_bytes, file_name=f"tcia_{ptype}_{date or 'all'}.db", mime="application/x-sqlite3")
-        except Exception as e:
-            st.info("SQLite download not available: " + str(e))
-
-        st.markdown("---")
-        st.subheader("Edit Submission Response")
-        sid = st.selectbox("Select Submission ID", options=records_df["submission_id"].tolist(), key="select_sid")
-        row = records_df.loc[records_df["submission_id"] == sid].iloc[0].to_dict()
-        editable_fields = [k for k in row.keys() if k not in ["submission_id", "created_at", "proposal_type"]]
-        updates = {}
-        for k in editable_fields:
-            v = row[k]
-            if k == "proposal_status":
-                new_v = st.selectbox("Proposal Status", options=PROPOSAL_STATUSES, index=PROPOSAL_STATUSES.index(v) if v in PROPOSAL_STATUSES else 0, key=f"status_{sid}")
-            else:
-                new_v = st.text_area(k.replace("_", " ").title(), value=str(v) if v is not None else "", key=f"edit_{k}_{sid}")
-            if str(new_v) != str(v):
-                updates[k] = new_v
-        if st.button("Update Submission", use_container_width=True):
-            if updates:
-                ok = update_record_fields(ptype, sid, updates)
-                if ok:
-                    st.success(f"Updated {sid} fields: {', '.join(updates.keys())}")
-                else:
-                    st.error("Failed to update record. Check file permissions and that the partition contains the record.")
-            else:
-                st.info("No changes to update.")
-
-
-def load_records(proposal_type: str, date: str | None):
-    """Load submissions from SQLite. Returns a pandas DataFrame or None."""
-    init_db()
-    conn = sqlite3.connect(DATA_DB)
-    try:
-        cur = conn.cursor()
-        params = [proposal_type]
-        sql = "SELECT payload FROM submissions WHERE proposal_type=?"
-        if date:
-            # filter by created_at date prefix
-            sql = "SELECT payload FROM submissions WHERE proposal_type=? AND created_at LIKE ?"
-            params.append(f"{date}%")
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        records = []
-        for (payload_txt,) in rows:
-            try:
-                rec = json.loads(payload_txt)
-            except Exception:
-                # fallback: skip malformed
-                continue
-            records.append(rec)
-        if records:
-            return pd.DataFrame(records)
-        return None
-    finally:
-        conn.close()
 
 
 # ----------------------------
@@ -815,13 +561,3 @@ if nav == "Submit":
     submit_page()
 else:
     admin_page()
-
-
-# ----------------------------
-# requirements.txt (place this in a separate file)
-# streamlit==1.37.1
-# pandas==2.2.2
-# pyarrow==16.1.0  # preferred parquet engine (or)
-# fastparquet==2024.5.0  # fallback parquet engine
-# reportlab==4.2.2
-# requests==2.32.3  # optional, for Slack
