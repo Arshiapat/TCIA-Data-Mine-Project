@@ -280,6 +280,11 @@ def unified_term_search(user_input: str):
 # UI Components
 # ----------------------------
 def header():
+    logo_src = os.getenv("BRAND_LOGO_URL", "TCIA-Logo.png")
+
+    c1, c2, c3 = st.columns([1,3,1])
+    with c2:
+        st.image(logo_src, use_container_width=False)
     st.title(APP_TITLE)
     st.caption("Submit proposals for TCIA publication. Public form; admin view requires PIN.")
 
