@@ -1,8 +1,12 @@
 import streamlit as st
 import json
 import requests
+import shlex
+import subprocess
 
 st.set_page_config(page_title="Provide a Dataset Description", layout="centered")
+
+OLLAMA_HOST = "http://127.0.0.1:11434"  # prefer 127.0.0.1 on Windows
 
 # ---------------- CICADAS logic ----------------
 def manual_cicadas_check(text: str):
@@ -28,7 +32,6 @@ def manual_cicadas_check(text: str):
     return all_ok, report
 
 def cicadas_prompt(description_text: str, report):
-    """Build a clear instruction prompt for Ollama or any LLM."""
     missing = [s for s, ok, _ in report if not ok]
     present = [s for s, ok, _ in report if ok]
 
@@ -56,6 +59,7 @@ Tasks:
 Author text:
 \"\"\"{description_text.strip()}\"\"\"
 
+
 Current detection:
 Present: {present if present else "None"}
 Missing: {missing if missing else "None"}
@@ -67,26 +71,97 @@ Format:
 4) JSON summary line as a single JSON object
 """
 
+# ---------------- Ollama helpers ----------------
+def ollama_probe(host=OLLAMA_HOST):
+    try:
+        r = requests.get(f"{host}/api/tags", timeout=5)
+        r.raise_for_status()
+        models = [m.get("name") for m in r.json().get("models", [])]
+        return True, models
+    except Exception as e:
+        return False, str(e)
+
 def call_ollama(model: str, prompt: str, temperature: float = 0.2):
-    import requests, json
+    """
+    Robust caller:
+    1) Try /api/chat non streaming
+    2) Fallback to /api/generate streaming line JSON
+    3) Final fallback to CLI
+    """
+    # 1) /api/chat
     try:
         resp = requests.post(
-            "http://localhost:11434/api/generate",
+            f"{OLLAMA_HOST}/api/chat",
             json={
                 "model": model,
-                "prompt": prompt,
-                "stream": False,
+                "messages": [{"role": "user", "content": prompt}],
                 "options": {"temperature": temperature},
+                "stream": False
             },
             timeout=120,
         )
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("response", "").strip()
+        if resp.status_code == 200:
+            data = resp.json()
+            if "message" in data and "content" in data["message"]:
+                return data["message"]["content"].strip()
+            if "response" in data:
+                return data["response"].strip()
+        elif resp.status_code != 404:
+            resp.raise_for_status()
+    except Exception:
+        pass
+
+    # 2) /api/generate streaming
+    try:
+        r = requests.post(
+            f"{OLLAMA_HOST}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "options": {"temperature": temperature},
+                "stream": True
+            },
+            stream=True,
+            timeout=120,
+        )
+        if r.status_code == 200:
+            chunks = []
+            for line in r.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if "error" in obj and obj["error"]:
+                    return f"[Ollama error] {obj['error']}"
+                if "response" in obj:
+                    chunks.append(obj["response"])
+                elif "message" in obj and "content" in obj["message"]:
+                    chunks.append(obj["message"]["content"])
+            out = "".join(chunks).strip()
+            return out or "[empty response]"
+        elif r.status_code != 404:
+            r.raise_for_status()
+    except Exception as e:
+        # fall through to CLI
+        pass
+
+    # 3) CLI fallback
+    try:
+        cmd = f'ollama run {shlex.quote(model)} --temperature {temperature}'
+        result = subprocess.run(
+            cmd,
+            input=prompt.encode("utf-8"),
+            capture_output=True,
+            timeout=180,
+            shell=True,
+        )
+        if result.returncode != 0:
+            return f"[Ollama error] {result.stderr.decode(errors='ignore').strip()}"
+        return result.stdout.decode(errors='ignore').strip()
     except Exception as e:
         return f"[Ollama error] {e}"
-
-
 
 # ---------------- Session state ----------------
 ss = st.session_state
@@ -95,10 +170,23 @@ ss.setdefault("report", [])
 ss.setdefault("overview_out", "")
 ss.setdefault("revise_out", "")
 ss.setdefault("last_prompt", "")
-ss.setdefault("ollama_model", "llama3.1")  # change to your local model name
+ss.setdefault("ollama_model", "llama3")  # default to llama3 for your feature
+ss.setdefault("probe_result", None)
 
 # ---------------- UI ----------------
 st.title("Provide a Dataset Description")
+
+# Probe card
+if st.button("Test Ollama connection"):
+    ok, data = ollama_probe()
+    ss["probe_result"] = (ok, data)
+
+if ss.get("probe_result"):
+    ok, data = ss["probe_result"]
+    if ok:
+        st.success(f"Ollama OK at {OLLAMA_HOST}. Models: {', '.join(data) or 'none installed'}")
+    else:
+        st.error(f"Ollama not reachable: {data}")
 
 user_text = st.text_area(
     "Paste your description",
@@ -136,11 +224,10 @@ with st.expander("CICADAS checklist details", expanded=not ss["all_ok"]):
 st.divider()
 
 # Always-visible controls
-st.text_input("Ollama model name", key="ollama_model", help="For example: llama3.1, qwen2.5, mistral, or your fine-tuned model")
+st.text_input("Ollama model name", key="ollama_model", help="Examples: llama3, llama3.1, qwen2.5, mistral, or a fine-tuned name")
 
 # Actions
 def run_revise_pipeline():
-    # Ensure we have a fresh check
     if user_text.strip():
         all_ok, report = manual_cicadas_check(user_text)
         ss["all_ok"], ss["report"] = all_ok, report
@@ -156,7 +243,6 @@ if do_combo:
     run_revise_pipeline()
 
 if do_revise and not do_combo:
-    # If no manual check yet, do one implicitly
     if not user_text.strip():
         st.warning("Please paste a description first.")
     else:
@@ -190,7 +276,6 @@ if st.button("Run AI overview only"):
         ss["last_prompt"] = prompt
         with st.spinner("Calling Ollama for overview..."):
             ai_text = call_ollama(ss["ollama_model"], prompt)
-        # Trim to the Overview part if desired, or just show full for now
         ss["overview_out"] = ai_text
         with st.expander("AI overview"):
             st.text(ss["overview_out"])
