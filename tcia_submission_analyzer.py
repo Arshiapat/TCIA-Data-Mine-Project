@@ -1,8 +1,4 @@
-"""
-Enhanced Medical Dataset Analyzer for TCIA Submissions
-Comprehensive analysis with TCIA form automation and detailed reporting
-Version 4.0
-"""
+# Version 5.0
 
 import os
 import json
@@ -36,6 +32,8 @@ except ImportError:
 class TCIADatasetAnalyzer:
     """
     Enhanced medical dataset analyzer with TCIA form automation.
+    Version 5.0 - Improved robustness for subject counting, cross-referencing,
+    and segmentation detection.
     """
     
     # File type classifications using multiple detection methods
@@ -86,7 +84,71 @@ class TCIADatasetAnalyzer:
         'Radiotherapy': {
             'extensions': {'.dcm'},  # Will check DICOM modality
             'modalities': {'RTPLAN', 'RTSTRUCT', 'RTDOSE', 'RTIMAGE'}
+        },
+        'Segmentation': {
+            'extensions': {'.nii', '.nii.gz', '.nrrd', '.seg.nrrd'},
+            'patterns': [r'_seg\.', r'_mask\.', r'_label\.', r'segmentation', r'_roi\.']
         }
+    }
+    
+    # Expanded patient ID column patterns for better detection
+    PATIENT_ID_PATTERNS = [
+        # Exact/near-exact matches (high confidence)
+        r'^patient[_\s-]?id$',
+        r'^subject[_\s-]?id$',
+        r'^participant[_\s-]?id$',
+        r'^case[_\s-]?id$',
+        r'^patient$',
+        r'^subject$',
+        r'^participant$',
+        r'^case$',
+        # Medical record identifiers
+        r'^mrn$',
+        r'^medical[_\s-]?record[_\s-]?(number|no|num|id)?$',
+        r'^patient[_\s-]?number$',
+        r'^subject[_\s-]?number$',
+        # Study/accession identifiers (sometimes used as patient proxy)
+        r'^accession[_\s-]?(number|no|num|id)?$',
+        # Common variations
+        r'^pt[_\s-]?id$',
+        r'^subj[_\s-]?id$',
+        r'^pid$',
+        r'^sid$',
+        # TCIA-specific patterns
+        r'^tcia[_\s-]?id$',
+        r'^collection[_\s-]?id$',
+        # Generic ID (lower confidence - will verify with heuristics)
+        r'^id$',
+        r'^index$',
+    ]
+    
+    # Extended modality mapping for image types
+    MODALITY_TO_IMAGE_TYPE = {
+        'CT': 'CT (Computed Tomography)',
+        'MR': 'MR (Magnetic Resonance)',
+        'PT': 'PT (Positron Emission Tomography)',
+        'NM': 'NM (Nuclear Medicine)',
+        'US': 'Ultrasound',
+        'MG': 'Mammograms',
+        'DM': 'Digital Mammography',
+        'DX': 'X-ray (Digital Radiography)',
+        'CR': 'X-ray (Computed Radiography)',
+        'XA': 'X-ray Angiography',
+        'RF': 'Radiofluoroscopy',
+        'ES': 'Endoscopy',
+        'XC': 'External Camera Photography',
+        'OP': 'Ophthalmic Photography',
+        'OPT': 'Optical Coherence Tomography',
+        'OCT': 'Optical Coherence Tomography',
+        'SM': 'Slide Microscopy',
+        'IVUS': 'Intravascular Ultrasound',
+        'SC': 'Secondary Capture',
+        'RTIMAGE': 'Radiation Therapy Images',
+    }
+    
+    # Modalities that are NOT image types (supporting data only)
+    NON_IMAGE_MODALITIES = {
+        'SR', 'OT', 'RTSTRUCT', 'RTDOSE', 'RTPLAN', 'SEG', 'PR', 'KO', 'DOC', 'REG', 'FID', 'PLAN', 'RWV',
     }
     
     def __init__(self, max_workers: int = 4, verbose: bool = True):
@@ -95,6 +157,9 @@ class TCIADatasetAnalyzer:
         self.results = {}
         self.processing_log = []
         self.tcia_form_data = {}
+        # Store actual patient IDs for cross-referencing
+        self._dicom_patient_ids = set()
+        self._tabular_patient_ids = {}  # file -> column -> set of IDs
         
     def analyze_dataset(self, root_path: str) -> Dict[str, Any]:
         """Main analysis entry point."""
@@ -103,7 +168,7 @@ class TCIADatasetAnalyzer:
             raise ValueError(f"Directory does not exist: {root_path}")
         
         self._log("="*80)
-        self._log("TCIA DATASET ANALYZER - Starting comprehensive analysis")
+        self._log("TCIA DATASET ANALYZER v5.0 - Starting comprehensive analysis")
         self._log("="*80)
         start_time = datetime.now()
         
@@ -196,13 +261,22 @@ class TCIADatasetAnalyzer:
         except:
             return False
     
+    def _is_segmentation_file(self, file_path: Path) -> bool:
+        """Check if file is likely a segmentation mask based on naming patterns."""
+        filename = file_path.name.lower()
+        seg_patterns = [r'_seg\.', r'_mask\.', r'_label\.', r'segmentation', r'_roi\.']
+        for pattern in seg_patterns:
+            if re.search(pattern, filename, re.IGNORECASE):
+                return True
+        return False
+    
     def _generate_metadata(self, root_path: Path, start_time: datetime) -> Dict[str, Any]:
         """Generate comprehensive metadata."""
         return {
             "dataset_path": str(root_path.absolute()),
             "dataset_name": root_path.name,
             "analysis_timestamp": start_time.isoformat(),
-            "analyzer_version": "4.0.0",
+            "analyzer_version": "5.0.0",
             "python_environment": {
                 "pandas_version": pd.__version__,
                 "numpy_version": np.__version__,
@@ -438,6 +512,10 @@ class TCIADatasetAnalyzer:
                 series_uid = str(getattr(ds, 'SeriesInstanceUID', 'Unknown'))
                 sop_uid = str(getattr(ds, 'SOPInstanceUID', 'Unknown'))
                 
+                # Track patient IDs for cross-referencing
+                if patient_id not in ('Unknown', 'UNKNOWN', '') and patient_id.strip():
+                    self._dicom_patient_ids.add(patient_id.strip())
+                
                 # Clinical metadata
                 modality = str(getattr(ds, 'Modality', 'Unknown'))
                 sop_class = str(getattr(ds, 'SOPClassUID', 'Unknown'))
@@ -656,41 +734,49 @@ class TCIADatasetAnalyzer:
                     column_type_dist[dtype] += 1
                     
                     # Check if this might be a patient ID column
-                    # Use more specific patterns to avoid false positives
+                    # Use expanded patterns with confidence levels
                     col_lower = col.lower().strip()
                     is_patient_id = False
+                    confidence = "low"
                     
-                    # Exact matches or close matches for patient ID columns
-                    patient_id_patterns = [
-                        r'^patient[_\s]?id$',
-                        r'^subject[_\s]?id$',
-                        r'^participant[_\s]?id$',
-                        r'^patient$',
-                        r'^subject$',
-                        r'^participant$',
-                        r'^id$',  # Only if it's likely a patient ID (high uniqueness)
-                    ]
-                    
-                    # Check patterns
-                    for pattern in patient_id_patterns:
+                    # Check against expanded patterns
+                    for pattern in self.PATIENT_ID_PATTERNS:
                         if re.match(pattern, col_lower):
                             is_patient_id = True
+                            # Higher confidence for explicit patient/subject patterns
+                            if 'patient' in pattern or 'subject' in pattern or 'participant' in pattern:
+                                confidence = "high"
+                            elif 'mrn' in pattern or 'medical' in pattern:
+                                confidence = "high"
+                            elif 'case' in pattern or 'accession' in pattern:
+                                confidence = "medium"
+                            else:
+                                confidence = "low"
                             break
                     
-                    # For simple "id" column, check if it has reasonable uniqueness
-                    # (not all unique like a row number, not all same like a constant)
-                    if col_lower == 'id' and not is_patient_id:
+                    # For low confidence matches (like "id"), apply heuristics
+                    if is_patient_id and confidence == "low":
                         unique_ratio = df[col].nunique() / len(df) if len(df) > 0 else 0
-                        # If 10-90% unique, might be a patient ID (not row number, not constant)
-                        if 0.1 <= unique_ratio <= 0.9:
-                            is_patient_id = True
+                        # If 10-95% unique, might be a patient ID
+                        if not (0.1 <= unique_ratio <= 0.95):
+                            is_patient_id = False
                     
                     if is_patient_id:
+                        # Collect actual patient IDs for cross-referencing
+                        unique_ids = set(df[col].dropna().astype(str).str.strip())
+                        unique_ids = {id for id in unique_ids if id and id.lower() not in ('nan', 'none', '')}
+                        
+                        if file_path.name not in self._tabular_patient_ids:
+                            self._tabular_patient_ids[file_path.name] = {}
+                        self._tabular_patient_ids[file_path.name][col] = unique_ids
+                        
                         patient_id_columns.append({
                             "file": file_path.name,
                             "column": col,
-                            "unique_count": int(df[col].nunique()),
-                            "unique_ratio": round(df[col].nunique() / len(df), 4) if len(df) > 0 else 0
+                            "unique_count": len(unique_ids),
+                            "unique_ratio": round(df[col].nunique() / len(df), 4) if len(df) > 0 else 0,
+                            "confidence": confidence,
+                            "sample_values": list(unique_ids)[:10]
                         })
                     
                     non_null = df[col].dropna()
@@ -884,36 +970,66 @@ class TCIADatasetAnalyzer:
         }
     
     def _analyze_relationships(self) -> Dict[str, Any]:
-        """Analyze relationships between different data types."""
+        """Analyze relationships between different data types with cross-referencing."""
         self._log("🔗 Analyzing data relationships...")
         
         relationships = {}
         
-        dicom_data = self.results.get("dicom_catalog", {})
-        tabular_data = self.results.get("tabular_catalog", {})
-        
-        if dicom_data.get("hierarchy", {}).get("patient_count", 0) > 0 and tabular_data.get("file_count", 0) > 0:
-            dicom_patients = set()
-            if "patient_details" in dicom_data:
-                dicom_patients = set(p["patient_id"] for p in dicom_data["patient_details"])
+        # Cross-reference DICOM and tabular patient IDs using stored sets
+        if self._dicom_patient_ids and self._tabular_patient_ids:
+            # Flatten all tabular patient IDs
+            all_tabular_ids = set()
+            for file_cols in self._tabular_patient_ids.values():
+                for ids in file_cols.values():
+                    all_tabular_ids.update(ids)
             
-            csv_patients = set()
-            for file_name, file_data in tabular_data.get("files", {}).items():
-                if "columns" in file_data:
-                    for col_name, col_data in file_data["columns"].items():
-                        if any(term in col_name.lower() for term in ['patient', 'subject', 'participant']):
-                            if "sample_values" in col_data:
-                                csv_patients.update(col_data["sample_values"])
+            common = self._dicom_patient_ids & all_tabular_ids
             
-            if dicom_patients and csv_patients:
-                common = dicom_patients & csv_patients
-                relationships["patient_overlap"] = {
-                    "dicom_patient_count": len(dicom_patients),
-                    "csv_patient_count": len(csv_patients),
-                    "common_patients": len(common),
-                    "dicom_only": len(dicom_patients - csv_patients),
-                    "csv_only": len(csv_patients - dicom_patients)
+            relationships["patient_overlap"] = {
+                "dicom_patient_count": len(self._dicom_patient_ids),
+                "tabular_patient_count": len(all_tabular_ids),
+                "common_patients": len(common),
+                "dicom_only": len(self._dicom_patient_ids - all_tabular_ids),
+                "tabular_only": len(all_tabular_ids - self._dicom_patient_ids),
+                "overlap_percentage": round((len(common) / max(len(self._dicom_patient_ids), 1)) * 100, 1),
+                "common_patient_samples": list(common)[:20]
+            }
+            
+            # Determine best subject count estimate
+            if common:
+                relationships["subject_count_estimate"] = {
+                    "best_estimate": len(common) if len(common) == len(self._dicom_patient_ids) else max(len(self._dicom_patient_ids), len(all_tabular_ids)),
+                    "confidence": "high" if len(common) == len(self._dicom_patient_ids) == len(all_tabular_ids) else "medium",
+                    "method": "cross-referenced DICOM and tabular patient IDs"
                 }
+            else:
+                relationships["subject_count_estimate"] = {
+                    "best_estimate": len(self._dicom_patient_ids) if self._dicom_patient_ids else len(all_tabular_ids),
+                    "confidence": "low",
+                    "method": "no overlap found - using larger count",
+                    "warning": "DICOM and tabular patient IDs do not match. Manual verification recommended."
+                }
+        elif self._dicom_patient_ids:
+            relationships["subject_count_estimate"] = {
+                "best_estimate": len(self._dicom_patient_ids),
+                "confidence": "medium",
+                "method": "DICOM PatientID only"
+            }
+        elif self._tabular_patient_ids:
+            # Find the highest-confidence patient ID column
+            best_count = 0
+            best_source = None
+            for file_name, cols in self._tabular_patient_ids.items():
+                for col_name, ids in cols.items():
+                    if len(ids) > best_count:
+                        best_count = len(ids)
+                        best_source = f"{file_name}:{col_name}"
+            
+            relationships["subject_count_estimate"] = {
+                "best_estimate": best_count,
+                "confidence": "medium",
+                "method": f"tabular data ({best_source})"
+            }
         
         return relationships
     
@@ -1174,59 +1290,25 @@ class TCIADatasetAnalyzer:
         inventory = self.results.get('file_inventory', {}).get('by_category', {})
         
         image_types = []
-        modality_mapping = {
-            # Standard imaging modalities
-            'CT': 'CT (Computed Tomography)',
-            'MR': 'MR (Magnetic Resonance)',
-            'PT': 'PT (Positron Emission Tomography)',
-            'NM': 'NM (Nuclear Medicine)',
-            'US': 'Ultrasound',
-            'MG': 'Mammograms',
-            'DM': 'Digital Mammography',
-            'DX': 'X-ray (Digital Radiography)',
-            'CR': 'X-ray (Computed Radiography)',
-            'XA': 'X-ray Angiography',
-            'RF': 'Radiofluoroscopy',
-            'ES': 'Endoscopy',
-            'XC': 'External Camera Photography',
-            'OP': 'Ophthalmic Photography',
-            'SC': 'Secondary Capture',
-            # Structured Reports are not images, skip SR
-        }
         
-        # Modalities that are NOT image types (supporting data only)
-        non_image_modalities = {
-            'SR',  # Structured Reports
-            'OT',  # Other
-            'RTSTRUCT',  # Radiotherapy Structure Set (segmentation)
-            'RTDOSE',  # Radiotherapy Dose (dose distribution)
-            'RTPLAN',  # Radiotherapy Plan (treatment plan)
-            'SEG',  # Segmentation (segmentation object)
-            'PR',  # Presentation State
-            'KO',  # Key Object Selection
-            'DOC',  # Document
-            'HL7',  # HL7 Structured Document
-        }
-        
-        # DICOM modalities
+        # DICOM modalities - use class constants
         if dicom.get('modalities_found'):
             for modality in dicom['modalities_found'].keys():
-                if modality in modality_mapping:
-                    image_types.append(modality_mapping[modality])
-                elif modality not in non_image_modalities:
+                if modality in self.MODALITY_TO_IMAGE_TYPE:
+                    image_types.append(self.MODALITY_TO_IMAGE_TYPE[modality])
+                elif modality not in self.NON_IMAGE_MODALITIES:
                     # Unknown modality that might be an image, add as-is with warning
                     image_types.append(f"{modality} (unknown modality - verify if image type)")
-        
-        # Radiotherapy - RTIMAGE is an image, others are supporting data
-        rt_data = dicom.get('radiotherapy', {})
-        if rt_data.get('has_rt_data'):
-            rt_counts = rt_data.get('rt_structure_counts', {})
-            if 'RTIMAGE' in rt_counts:
-                image_types.append('Radiation Therapy Images (RTIMAGE)')
         
         # Pathology slides
         if inventory.get('Pathology_Slides', {}).get('file_count', 0) > 0:
             image_types.append('Whole Slide Image')
+        
+        # Medical imaging (NIfTI, NRRD, etc.) - exclude segmentations
+        med_imaging_count = inventory.get('Medical_Imaging', {}).get('file_count', 0)
+        seg_count = inventory.get('Segmentation', {}).get('file_count', 0)
+        if med_imaging_count > seg_count:
+            image_types.append('Converted Medical Imaging (NIfTI/NRRD)')
         
         # Standard images (but note these might be documentation, not medical images)
         if inventory.get('Images', {}).get('file_count', 0) > 0:
@@ -1338,52 +1420,65 @@ class TCIADatasetAnalyzer:
         return result
     
     def _extract_subject_count(self) -> str:
-        """Extract total number of unique subjects."""
+        """Extract total number of unique subjects with cross-referencing."""
         dicom = self.results.get('dicom_catalog', {})
         tabular = self.results.get('tabular_catalog', {})
-        
-        # Get DICOM patient count (already excludes Unknown)
-        dicom_count = dicom.get('hierarchy', {}).get('patient_count', 0)
-        dicom_patients = set()
-        
-        # Collect actual patient IDs from DICOM (if available in patient_details)
-        if 'patient_details' in dicom:
-            dicom_patients = {p['patient_id'] for p in dicom['patient_details'] 
-                            if p['patient_id'] not in ('Unknown', 'UNKNOWN', '') and p['patient_id'].strip()}
-        
-        # Get tabular patient IDs
-        tabular_patients = set()
-        patient_cols = tabular.get('patient_id_columns', [])
-        
-        # Try to collect actual patient IDs from tabular data
-        # Note: This is limited since we only store unique_count, not the actual IDs
-        # So we'll report them separately but note potential overlap
+        relationships = self.results.get('relationships', {})
         
         subject_info = []
         warnings = []
         
+        # Get cross-referenced estimate if available
+        estimate = relationships.get('subject_count_estimate', {})
+        
         # DICOM count
+        dicom_count = dicom.get('hierarchy', {}).get('patient_count', 0)
         if dicom_count > 0:
-            subject_info.append(f"DICOM: {dicom_count} patients")
+            subject_info.append(f"DICOM PatientID: {dicom_count} unique patients")
             unknown_files = dicom.get('hierarchy', {}).get('unknown_patient_files', 0)
             if unknown_files > 0:
                 warnings.append(f"⚠️ {unknown_files} DICOM file(s) with missing PatientID excluded")
         
-        # Tabular counts
+        # Tabular counts with confidence
+        patient_cols = tabular.get('patient_id_columns', [])
         if patient_cols:
-            for col_info in patient_cols:
-                subject_info.append(f"CSV ({col_info['file']}): {col_info['unique_count']} unique {col_info['column']}")
+            # Group by confidence
+            high_conf = [c for c in patient_cols if c.get('confidence') == 'high']
+            med_conf = [c for c in patient_cols if c.get('confidence') == 'medium']
+            low_conf = [c for c in patient_cols if c.get('confidence') == 'low']
+            
+            if high_conf:
+                for col_info in high_conf:
+                    subject_info.append(f"Tabular ({col_info['file']} → {col_info['column']}): {col_info['unique_count']} unique IDs [HIGH confidence]")
+            if med_conf:
+                for col_info in med_conf:
+                    subject_info.append(f"Tabular ({col_info['file']} → {col_info['column']}): {col_info['unique_count']} unique IDs [MEDIUM confidence]")
+            if low_conf and not high_conf and not med_conf:
+                for col_info in low_conf[:2]:  # Only show first 2 low confidence
+                    subject_info.append(f"Tabular ({col_info['file']} → {col_info['column']}): {col_info['unique_count']} unique IDs [LOW confidence - verify]")
+        
+        # Cross-reference results
+        overlap = relationships.get('patient_overlap', {})
+        if overlap:
+            common = overlap.get('common_patients', 0)
+            if common > 0:
+                subject_info.append(f"\n🔗 Cross-reference: {common} patients found in BOTH DICOM and tabular data")
+                subject_info.append(f"   DICOM-only: {overlap.get('dicom_only', 0)}, Tabular-only: {overlap.get('tabular_only', 0)}")
         
         if not subject_info:
             return "Unable to determine - please count manually"
         
         result = "\n".join(subject_info)
         
-        # Add warning about potential overlap
-        if dicom_count > 0 and patient_cols:
-            result += "\n\n⚠️ Note: If the same patients appear in both DICOM and CSV files, they may be counted twice. Please verify manually."
+        # Add best estimate
+        if estimate:
+            result += f"\n\n📊 BEST ESTIMATE: {estimate.get('best_estimate', 'Unknown')} subjects"
+            result += f"\n   Confidence: {estimate.get('confidence', 'unknown').upper()}"
+            result += f"\n   Method: {estimate.get('method', 'unknown')}"
+            if estimate.get('warning'):
+                warnings.append(f"⚠️ {estimate['warning']}")
         
-        # Add warnings if any
+        # Add warnings
         if warnings:
             result += "\n\n" + "\n".join(warnings)
         
@@ -1674,10 +1769,17 @@ class TCIADatasetAnalyzer:
             print("─"*100)
             overlap = relationships['patient_overlap']
             print(f"DICOM Patients: {overlap['dicom_patient_count']}")
-            print(f"CSV Patients: {overlap['csv_patient_count']}")
-            print(f"Common Patients: {overlap['common_patients']}")
+            print(f"Tabular Patients: {overlap['tabular_patient_count']}")
+            print(f"Common Patients: {overlap['common_patients']} ({overlap.get('overlap_percentage', 0):.1f}% overlap)")
             print(f"DICOM Only: {overlap['dicom_only']}")
-            print(f"CSV Only: {overlap['csv_only']}")
+            print(f"Tabular Only: {overlap['tabular_only']}")
+        
+        if relationships.get('subject_count_estimate'):
+            est = relationships['subject_count_estimate']
+            print(f"\n📊 SUBJECT COUNT ESTIMATE:")
+            print(f"  Best Estimate: {est['best_estimate']}")
+            print(f"  Confidence: {est['confidence'].upper()}")
+            print(f"  Method: {est['method']}")
     
     def print_brief_summary(self):
         """Print a brief, comprehensive summary of the dataset."""
@@ -1925,7 +2027,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Enhanced TCIA Dataset Analyzer with Form Automation',
+        description='Enhanced TCIA Dataset Analyzer v5.0 with Form Automation',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1976,7 +2078,7 @@ Examples:
     # Get dataset path
     dataset_path = args.dataset_path
     if not dataset_path:
-        print("TCIA Dataset Analyzer")
+        print("TCIA Dataset Analyzer v5.0")
         print("=" * 50)
         dataset_path = input("Enter the path to your medical dataset folder: ").strip()
         
@@ -1993,7 +2095,7 @@ Examples:
         sys.exit(1)
     
     # Initialize analyzer
-    print(f"\nInitializing TCIA Dataset Analyzer for: {dataset_path}")
+    print(f"\nInitializing TCIA Dataset Analyzer v5.0 for: {dataset_path}")
     analyzer = TCIADatasetAnalyzer(
         max_workers=args.workers,
         verbose=not args.quiet
