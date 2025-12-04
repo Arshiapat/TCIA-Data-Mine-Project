@@ -43,6 +43,9 @@ import uuid
 import smtplib
 import hashlib
 import textwrap
+import shlex
+import subprocess
+import requests
 from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -51,6 +54,12 @@ from email.mime.application import MIMEApplication
 import pandas as pd
 import streamlit as st
 
+# --- local package import shim (MUST be before other imports) ---
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Helpers for auto-fill
+from intake.form_utils import parse_uploaded, normalize_record, DEFAULTS
 
 
 # ----------------------------
@@ -83,6 +92,17 @@ if "admin_authed_until" not in st.session_state:
     st.session_state.admin_authed_until = 0
 if "admin_token" not in st.session_state:
     st.session_state.admin_token = None
+
+# Auto-fill state (what the upload populates)
+if "prefill" not in st.session_state:
+    st.session_state.prefill = {
+        "proposal_type": DEFAULTS.get("proposal_type", "new_collection"),
+        "email": "",
+        "dataset_title": "",
+        "dataset_description": "",
+        # add more mappings later if you want additional sections prefilling
+    }
+
 
 # Ensure data dir
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -283,23 +303,230 @@ def sidebar_nav():
 
 def basic_info_block():
     st.subheader("Basic Information")
-    email = st.text_input("Email *")
-    sci_poc = st.text_area("Provide a scientific point of contact *", placeholder="Name, email, phone")
-    tech_poc = st.text_area("Provide a technical point of contact *", placeholder="Name, email, phone")
-    legal_admin = st.text_area("Provide a legal/contracts administrator *", placeholder="Name, email")
-    time_constraints = st.text_area("Are there any time constraints associated with sharing your data set? *")
+    email = st.text_input(
+        "Email *",
+        value=st.session_state.prefill.get("email", ""),
+        key="email"
+    )
+    sci_poc = st.text_area("Provide a scientific point of contact *", placeholder="Name, email, phone", key="sci_poc")
+    tech_poc = st.text_area("Provide a technical point of contact *", placeholder="Name, email, phone", key="tech_poc")
+    legal_admin = st.text_area("Provide a legal/contracts administrator *", placeholder="Name, email", key="legal_admin")
+    time_constraints = st.text_area("Are there any time constraints associated with sharing your data set? *", key="time_constraints")
     return email, sci_poc, tech_poc, legal_admin, time_constraints
 
+OLLAMA_HOST = "http://127.0.0.1:11434"  # works well on Windows
+
+def manual_cicadas_check(text: str):
+    checks = {
+        "Title": ["title", "dataset name"],
+        "Abstract": ["subject", "number", "modality", "application", "abstract"],
+        "Introduction": ["purpose", "background", "benefit", "introduction"],
+        "Methods: Inclusion/Exclusion": ["inclusion", "exclusion", "criteria"],
+        "Methods: Data Acquisition": ["acquisition", "scanner", "kvp", "te", "tr", "slice", "contrast"],
+        "Methods: Data Analysis": ["preprocessing", "annotation", "segmentation", "qc", "quality", "software", "version"],
+        "Usage Notes": ["organization", "naming", "subset", "split", "software", "format"],
+        "External Resources": ["repository", "github", "tool", "dataset", "resource"],
+        "Summary": ["summary", "conclusion", "value"],
+    }
+    low = text.lower()
+    report = []
+    all_ok = True
+    for section, kws in checks.items():
+        present = any(k in low for k in kws)
+        if not present:
+            all_ok = False
+        report.append((section, present, kws))
+    return all_ok, report
+
+def cicadas_prompt(description_text: str, report):
+    missing = [s for s, ok, _ in report if not ok]
+    present = [s for s, ok, _ in report if ok]
+
+    return f"""
+You are a technical writer formatting a dataset description according to the CICADAS checklist.
+
+CICADAS sections:
+- Title
+- Abstract
+- Introduction
+- Methods - Inclusion/Exclusion
+- Methods - Data Acquisition
+- Methods - Data Analysis
+- Usage Notes
+- External Resources
+- Summary
+
+Your task:
+1. Read the author's text.
+2. Use CICADAS as a guide to expand this into a fuller description.
+3. For each section, write 1–3 concise sentences using clear, professional language.
+4. Use reasonable domain knowledge for context (e.g., why the dataset is useful, general goals), but do not invent specific numeric details, institution names, or scanner models that are not given.
+5. If you truly have no basis for a section, write a short, helpful placeholder using "[TBD]" and explain what the author should add.
+6. Do not include your internal reasoning, analysis, bullets, or JSON.
+7. Do not use XML or HTML tags.
+8. Do not use markdown headings or bullet lists.
+9. Output only the final CICADAS-formatted description.
+
+Formatting (use these labels exactly, one per line or small paragraph):
+
+Title: ...
+Abstract: ...
+Introduction: ...
+Methods - Inclusion/Exclusion: ...
+Methods - Data Acquisition: ...
+Methods - Data Analysis: ...
+Usage Notes: ...
+External Resources: ...
+Summary: ...
+
+Author text:
+\"\"\"{description_text.strip()}\"\"\"
+
+Detected (for your internal use only, do NOT repeat this section in the output):
+Present: {present if present else "None"}
+Missing: {missing if missing else "None"}
+"""
+
+
+
+def call_ollama(model: str, prompt: str, temperature: float = 0.2):
+    """
+    1) Try /api/chat
+    2) Fallback to /api/generate with streaming
+    3) Fallback to CLI
+    """
+    # 1) /api/chat
+    try:
+        resp = requests.post(
+            f"{OLLAMA_HOST}/api/chat",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "options": {"temperature": temperature, "num_predict": 400},
+                "stream": False
+            },
+            timeout=120,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if "message" in data and "content" in data["message"]:
+                return data["message"]["content"].strip()
+            if "response" in data:
+                return data["response"].strip()
+        elif resp.status_code != 404:
+            resp.raise_for_status()
+    except Exception:
+        pass
+
+    # 2) /api/generate streaming
+    try:
+        r = requests.post(
+            f"{OLLAMA_HOST}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "options": {"temperature": temperature, "num_predict": 400},
+                "stream": True
+            },
+            stream=True,
+            timeout=120,
+        )
+        if r.status_code == 200:
+            chunks = []
+            for line in r.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if "error" in obj and obj["error"]:
+                    return f"[Ollama error] {obj['error']}"
+                if "response" in obj:
+                    chunks.append(obj["response"])
+                elif "message" in obj and "content" in obj["message"]:
+                    chunks.append(obj["message"]["content"])
+            out = "".join(chunks).strip()
+            return out or "[empty response]"
+        elif r.status_code != 404:
+            r.raise_for_status()
+    except Exception:
+        pass
+
+    # 3) CLI fallback
+    try:
+        cmd = f'ollama run {shlex.quote(model)} --temperature {temperature}'
+        result = subprocess.run(
+            cmd,
+            input=prompt.encode("utf-8"),
+            capture_output=True,
+            timeout=180,
+            shell=True,
+        )
+        if result.returncode != 0:
+            return f"[Ollama error] {result.stderr.decode(errors="ignore").strip()}"
+        return result.stdout.decode(errors="ignore").strip()
+    except Exception as e:
+        return f"[Ollama error] {e}"
 
 def dataset_pub_block(include_nickname_required: bool):
     st.subheader("Dataset Publication")
-    title = st.text_input("Suggest a descriptive title for your dataset *")
+
+    title = st.text_input(
+        "Suggest a descriptive title for your dataset *",
+        value=st.session_state.prefill.get("dataset_title", ""),
+        key="dataset_title"
+    )
+
     nickname_label = "Suggest a shorter nickname for your dataset" + (" *" if include_nickname_required else "")
-    nickname = st.text_input(nickname_label, help="< 30 chars; letters, numbers, dashes")
-    authors = st.text_area("List the authors of this data set *", help="List as (FAMILY, GIVEN); include OrcIDs")
+    nickname = st.text_input(
+        nickname_label,
+        help="< 30 chars; letters, numbers, dashes",
+        key="dataset_nickname"
+    )
+
+    authors = st.text_area(
+        "List the authors of this data set *",
+        help="List as (FAMILY, GIVEN); include OrcIDs",
+        key="authors"
+    )
+
     desc_label = "Provide a Dataset Description *"
-    description = st.text_area(desc_label, height=200)
-    return title, nickname, authors, description
+    description = st.text_area(
+        desc_label,
+        height=200,
+        value=st.session_state.prefill.get("dataset_description", ""),
+        key="dataset_description"
+    )
+
+    # CICADAS helper UI directly under the description
+    with st.expander("CICADAS checklist and AI helper (optional)"):
+        st.caption("Run an explicit CICADAS check and optionally revise this description using a local model.")
+
+        manual_clicked = st.form_submit_button("Run CICADAS manual check", type="secondary")
+        revise_clicked = st.form_submit_button("Revise description with AI", type="primary")
+
+        if manual_clicked:
+            if not description.strip():
+                st.warning("Please enter a dataset description above before running the CICADAS check.")
+            else:
+                all_ok, report = manual_cicadas_check(description)
+                if all_ok:
+                    st.success("CICADAS checklist looks satisfied based on a simple keyword scan.")
+                else:
+                    st.error("Some CICADAS sections may be missing or incomplete.")
+                for section, present, kws in report:
+                    if present:
+                        st.success(f"{section}: detected")
+                    else:
+                        st.warning(f"{section}: missing or incomplete")
+                        st.caption("Consider adding: " + ", ".join(kws))
+
+        # We do NOT call AI here. We just capture that the button was clicked.
+        # The actual revision happens in submit_page so it can update session_state and rerun.
+
+    return title, nickname, authors, description, manual_clicked, revise_clicked
+
 
 
 def data_collection_block():
@@ -384,20 +611,147 @@ def analysis_only_block():
         "reasons_other": reasons_other,
     }
 
+def autofill_section():
+    st.subheader("Load from file (optional)")
+    up = st.file_uploader("Upload JSON / CSV / YAML to auto-fill core fields",
+                          type=["json","csv","yml","yaml"])
+    if not up:
+        return
+    raw = parse_uploaded(up)
+    norm = normalize_record(raw)  # normalized keys: proposal_type, title, contact_email, short_abstract, etc.
+
+    # Map normalized keys into your app’s field names
+    st.session_state.prefill["proposal_type"] = norm.get("proposal_type", st.session_state.prefill["proposal_type"])
+    st.session_state.prefill["email"] = norm.get("contact_email", st.session_state.prefill["email"])
+    st.session_state.prefill["dataset_title"] = norm.get("title", st.session_state.prefill["dataset_title"])
+    st.session_state.prefill["dataset_description"] = norm.get("short_abstract", st.session_state.prefill["dataset_description"])
+
+    st.success("Loaded values from file. Review/edit the fields below before submitting.")
+
 
 # ----------------------------
 # Submit Page
 # ----------------------------
 
+def dataset_description_helper():
+    st.subheader("Optional: Dataset Description Helper (CICADAS + AI)")
+
+    # Initialize working text from prefill the first time
+    if "cicadas_working_text" not in st.session_state:
+        st.session_state.cicadas_working_text = st.session_state.prefill.get("dataset_description", "")
+
+    text = st.text_area(
+        "Working draft for dataset description",
+        key="cicadas_working_text",
+        height=220,
+        placeholder="Paste or type your dataset description draft here..."
+    )
+
+    col1, col2, col3 = st.columns([1, 1, 1])
+    do_manual = col1.button("Manual CICADAS check")
+    do_revise = col2.button("Revise with AI")
+    do_combo = col3.button("Check → Revise")
+
+    if "cicadas_report" not in st.session_state:
+        st.session_state.cicadas_report = None
+    if "cicadas_ai_out" not in st.session_state:
+        st.session_state.cicadas_ai_out = ""
+    if "cicadas_last_prompt" not in st.session_state:
+        st.session_state.cicadas_last_prompt = ""
+    if "ollama_model_name" not in st.session_state:
+        st.session_state.ollama_model_name = "llama3.2:3b"  # or llama3.2:3b if you pull it
+
+    st.text_input("Ollama model name", key="ollama_model_name", help="For example: llama3, llama3.2:3b, mistral")
+
+    if not text.strip():
+        st.info("Enter some text above to run CICADAS checks or AI revision.")
+        return
+
+    # Run manual check when asked
+    if do_manual or do_combo:
+        all_ok, report = manual_cicadas_check(text)
+        st.session_state.cicadas_report = (all_ok, report)
+
+    # Show checklist if we have one
+    if st.session_state.cicadas_report:
+        all_ok, report = st.session_state.cicadas_report
+        with st.expander("CICADAS checklist details", expanded=not all_ok):
+            if all_ok:
+                st.success("CICADAS checklist satisfied")
+            else:
+                st.error("CICADAS checklist not complete")
+            for section, present, kws in report:
+                if present:
+                    st.success(f"{section}: detected")
+                else:
+                    st.warning(f"{section}: missing or incomplete")
+                    st.caption("Consider adding: " + ", ".join(kws))
+
+    # Run AI revision
+    if do_revise or do_combo:
+        # Ensure we have a report
+        if not st.session_state.cicadas_report:
+            st.session_state.cicadas_report = manual_cicadas_check(text)
+        _, report = st.session_state.cicadas_report
+
+        prompt = cicadas_prompt(text, report)
+        st.session_state.cicadas_last_prompt = prompt
+        with st.spinner("Calling Ollama to revise description..."):
+            out = call_ollama(st.session_state.ollama_model_name, prompt)
+        st.session_state.cicadas_ai_out = out
+
+    if st.session_state.cicadas_last_prompt:
+        with st.expander("Prompt sent to the model"):
+            st.code(st.session_state.cicadas_last_prompt)
+
+    if st.session_state.cicadas_ai_out:
+        st.subheader("AI revised draft")
+        st.text_area(
+            "Revised description",
+            st.session_state.cicadas_ai_out,
+            height=260,
+            key="cicadas_ai_preview"
+        )
+        if st.button("Use revised draft in form below"):
+            # Push into prefill so the Dataset Description field gets populated
+            st.session_state.prefill["dataset_description"] = st.session_state.cicadas_ai_out
+            st.success("Revised description will be used in the dataset description field below on the next refresh.")
+
 def submit_page():
     header()
 
-    # --- Type selector OUTSIDE the form so the UI re-renders immediately on change ---
-    proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=0)
+    # ---------- Upload → auto-fill (put this BEFORE the type select) ----------
+    if "prefill" not in st.session_state:
+        st.session_state.prefill = {
+            "proposal_type": "new_collection",
+            "email": "",
+            "dataset_title": "",
+            "dataset_description": "",
+        }
+
+    st.subheader("Load from file (optional)")
+    up = st.file_uploader(
+        "Upload JSON / CSV / YAML to auto-fill core fields",
+        type=["json", "csv", "yml", "yaml"]
+    )
+    if up:
+        raw = parse_uploaded(up)
+        norm = normalize_record(raw)
+        st.session_state.prefill["proposal_type"] = norm.get("proposal_type", st.session_state.prefill["proposal_type"])
+        st.session_state.prefill["email"] = norm.get("contact_email", st.session_state.prefill["email"])
+        st.session_state.prefill["dataset_title"] = norm.get("title", st.session_state.prefill["dataset_title"])
+        st.session_state.prefill["dataset_description"] = norm.get("short_abstract", st.session_state.prefill["dataset_description"])
+        st.success("Loaded values from file. Review/edit below before submitting.")
+    st.markdown("---")
+
+    # ---------- Type selector OUTSIDE the form so UI re-renders on change ----------
+    default_pt = st.session_state.prefill.get("proposal_type", "new_collection")
+    default_index = 0 if default_pt == "new_collection" else 1
+    proposal_type = st.selectbox("Proposal Type", ["New Collection", "Analysis Results"], index=default_index)
     st.info(f"You are filling out the **{proposal_type}** proposal.")
     st.markdown("---")
 
-    # (honeypot stays outside or inside; keeping it outside is fine)
+    # (honeypot)
     st.markdown(
         "<div style='position:absolute;left:-10000px;' aria-hidden='true'>"
         "<input name='website' value='' />"
@@ -406,20 +760,18 @@ def submit_page():
     )
     honeypot = st.query_params.get("website", "") if hasattr(st, "query_params") else ""
 
+    # ---------- Form ----------
     with st.form("proposal_form", clear_on_submit=False):
-        # Shared sections for both forms
         email, sci_poc, tech_poc, legal_admin, time_constraints = basic_info_block()
-        title, nickname, authors, description = dataset_pub_block(
+        title, nickname, authors, description, manual_clicked, revise_clicked = dataset_pub_block(
             include_nickname_required=(proposal_type == "New Collection")
         )
 
-        # Switch in the right question set based on selection
         if proposal_type == "New Collection":
-            details = data_collection_block()      # Form 1 fields
+            details = data_collection_block()
         else:
-            details = analysis_only_block()        # Form 2 fields
+            details = analysis_only_block()
 
-        # Optional notifications
         st.markdown("---")
         st.subheader("Notification Options (optional)")
         alert_recipients = st.text_input("Recipient email(s) for alerts (comma-separated)")
@@ -427,17 +779,37 @@ def submit_page():
 
         submitted = st.form_submit_button("Submit Proposal", use_container_width=True)
 
+
+    # Handle "Revise with AI" click: run CICADAS + model, replace description, do NOT submit yet
+    if revise_clicked and not submitted:
+        if not description.strip():
+            st.warning("Please enter a dataset description before asking AI to revise it.")
+            return
+
+        # Run CICADAS check for the prompt
+        all_ok, report = manual_cicadas_check(description)
+        prompt = cicadas_prompt(description, report)
+
+        with st.spinner("Revising dataset description with AI (llama3.2:3b)..."):
+            ai_text = call_ollama("llama3.2:3b", prompt)
+
+        # Replace the description by updating prefill and rerunning
+        st.session_state.prefill["dataset_description"] = ai_text
+        st.success("Description updated by AI. Review the new text above, then submit when ready.")
+        st.stop()  # force rerun so the text area shows the new description
+
     if not submitted:
         return
 
-    # --- cooldown ---
+
+    # ---------- Cooldown ----------
     now = time.time()
     if now - st.session_state.get("last_submit_ts", 0) < SUBMIT_COOLDOWN:
         st.warning("You're submitting too fast. Please wait a few seconds and try again.")
         return
     st.session_state["last_submit_ts"] = now
 
-    # --- validations (shared) ---
+    # ---------- Validations (shared) ----------
     errors = []
     if honeypot:
         errors.append("Spam detected.")
@@ -449,7 +821,6 @@ def submit_page():
         errors.append("Technical point of contact is required.")
     if not legal_admin.strip():
         errors.append("Legal/contracts administrator is required.")
-    # If you want parity with original Google Forms, require time constraints for New Collection only:
     if proposal_type == "New Collection" and not time_constraints.strip():
         errors.append("Time constraints field is required for New Collection.")
     if not title.strip():
@@ -457,14 +828,14 @@ def submit_page():
     if proposal_type == "New Collection":
         if not nickname.strip():
             errors.append("Dataset nickname is required for New Collection.")
-        elif not re.fullmatch(r"[A-Za-z0-9\-]{1,30}", nickname or ""):
+        elif not re.fullmatch(r"[A-Za-z0-9\\-]{1,30}", nickname or ""):
             errors.append("Nickname must be <30 chars and only letters, numbers, or dashes.")
     if not authors.strip():
         errors.append("Authors are required.")
     if not description.strip():
         errors.append("Dataset description is required.")
 
-    # --- per-type validations ---
+    # ---------- Per-type validations ----------
     if proposal_type == "New Collection":
         must = [
             (details["published_elsewhere"], "Published elsewhere details are required."),
@@ -501,7 +872,7 @@ def submit_page():
         st.error("\n".join([f"• {e}" for e in errors]))
         return
 
-    # --- build record & save ---
+    # ---------- Build record & save ----------
     submission_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
 
@@ -547,7 +918,11 @@ def submit_page():
         )
 
     st.success("Submission received! Your Submission ID is: " + submission_id)
-    st.download_button("Download Receipt (JSON)", json.dumps(record, indent=2), file_name=f"tcia_receipt_{submission_id}.json")
+    st.download_button(
+        "Download Receipt (JSON)",
+        json.dumps(record, indent=2),
+        file_name=f"tcia_receipt_{submission_id}.json"
+    )
 
 
 # ----------------------------
@@ -655,3 +1030,5 @@ else:
 # requests==2.32.3  # optional, for Slack
 
 #git push origin -u feature/streamlit-parquet-intake
+
+#We should agree on an input file to autofill, so that you know what you're getting from both groups when you're populating. ANd, so thta things do not get too complicated

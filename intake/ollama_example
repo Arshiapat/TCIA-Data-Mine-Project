@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import requests
+import json
+
+OLLAMA_URL = "http://127.0.0.1:11434"  # prefer 127.0.0.1 on Windows
+
+def ollama_models():
+    try:
+        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        r.raise_for_status()
+        return [m.get("name") for m in r.json().get("models", [])]
+    except Exception as e:
+        return [f"[probe error] {e}"]
+
+def ollama_generate(prompt, model="llama3:latest", temperature=0.2):
+    """Call Ollama /api/generate with streaming and clear error handling."""
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "options": {"temperature": temperature},
+        "stream": True
+    }
+    try:
+        with requests.post(
+            f"{OLLAMA_URL}/api/generate",
+            json=payload,
+            stream=True,
+            timeout=120,
+        ) as resp:
+            if resp.status_code != 200:
+                return f"[ollama http {resp.status_code}] {resp.text}"
+            chunks = []
+            for line in resp.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                # Newer builds stream "response"
+                if "response" in obj:
+                    chunks.append(obj["response"])
+                # Some builds emit an error midstream
+                if "error" in obj and obj["error"]:
+                    return f"[ollama error] {obj['error']}"
+            out = "".join(chunks).strip()
+            return out or "[empty response]"
+    except requests.exceptions.ConnectionError as e:
+        return f"[connect error] {e}"
+    except requests.exceptions.Timeout:
+        return "[timeout] request exceeded 120s"
+    except Exception as e:
+        return f"[unexpected] {e}"
+
+if __name__ == "__main__":
+    # Quick sanity checks
+    print("Installed models:", ollama_models())
+    uniq_prompt = (
+        "You are writing the 'Uniqueness to TCIA' section for a TCIA dataset slide.\n"
+        "Summarize in 2–3 short sentences what makes this dataset unique compared to existing TCIA collections."
+    )
+    print(ollama_generate(uniq_prompt, model="llama3:latest"))
