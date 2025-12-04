@@ -20,6 +20,7 @@ import sqlite3
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from tcia_submission_analyzer import TCIADatasetAnalyzer
 
 # --- local package import shim (MUST be before other imports) ---
 import os as _os
@@ -234,6 +235,125 @@ def query_submissions(proposal_type: str | None = None, date: str | None = None)
         return df
     finally:
         conn.close()
+
+
+def run_dataset_analyzer_ui():
+    st.subheader("TCIA Dataset Analyzer (local filesystem)")
+
+    st.caption(
+        "Point this at a local dataset folder on the server. "
+        "This runs the enhanced analyzer and generates TCIA form helper answers."
+    )
+
+    dataset_path = st.text_input(
+        "Dataset folder path on the server *",
+        placeholder="/path/to/dataset/root",
+        key="analyzer_dataset_path",
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        generate_html = st.checkbox(
+            "Also prepare an HTML report for download", value=False
+        )
+    with col2:
+        tcia_only = st.checkbox(
+            "Only generate TCIA form answers (skip full console summary)",
+            value=False,
+        )
+
+    if st.button("Run dataset analysis", use_container_width=True):
+        path = dataset_path.strip()
+        if not path:
+            st.warning("Please enter a dataset path first.")
+            return
+        if not os.path.exists(path):
+            st.error(f"Path does not exist on server: {path}")
+            return
+        if not os.path.isdir(path):
+            st.error("The path must be a directory, not a file.")
+            return
+
+        with st.spinner("Analyzing dataset — this may take a while for large folders..."):
+            analyzer = TCIADatasetAnalyzer(max_workers=4, verbose=False)
+            results = analyzer.analyze_dataset(path)
+
+        st.success("Analysis complete.")
+
+        # Quick metrics
+        overview = results.get("dataset_overview", {})
+        dicom = results.get("dicom_catalog", {})
+        tabular = results.get("tabular_catalog", {})
+
+        st.markdown("### High-level metrics")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total files", f"{overview.get('total_files', 0):,}")
+        m2.metric("Size (GB)", f"{overview.get('total_size_gb', 0):.2f}")
+        m3.metric(
+            "DICOM patients",
+            f"{dicom.get('hierarchy', {}).get('patient_count', 0)}",
+        )
+        m4.metric(
+            "Tabular files",
+            f"{tabular.get('file_count', 0)}",
+        )
+
+        # TCIA form auto-answers (text)
+        tcia_text = analyzer._capture_print_output(analyzer.print_tcia_form_answers)
+        st.markdown("### Auto-generated TCIA form answers")
+        st.text_area(
+            "These are the 6 high-confidence auto answers from the analyzer.",
+            tcia_text,
+            height=350,
+        )
+
+        # Optional full console-style summary (same as CLI output)
+        if not tcia_only:
+            summary_text = analyzer._capture_print_output(
+                analyzer.print_comprehensive_summary
+            )
+        else:
+            summary_text = ""
+        combined_text = summary_text + ("\n\n" if summary_text else "") + tcia_text
+
+        # Download buttons
+        st.markdown("### Downloads")
+
+        # JSON results (full structured output)
+        json_bytes = json.dumps(results, indent=2, default=str).encode("utf-8")
+        st.download_button(
+            "Download JSON results",
+            data=json_bytes,
+            file_name="tcia_dataset_analysis.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+        # Text summary (what the CLI prints)
+        st.download_button(
+            "Download text summary",
+            data=combined_text.encode("utf-8"),
+            file_name="tcia_dataset_summary.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+        # Optional HTML report via the analyzer’s own HTML generator
+        if generate_html:
+            # Let the analyzer write an HTML file, then read it back for download
+            html_path = analyzer.save_results(output_path=None, format="html")
+            try:
+                with open(html_path, "r", encoding="utf-8") as f:
+                    html_bytes = f.read().encode("utf-8")
+                st.download_button(
+                    "Download HTML report",
+                    data=html_bytes,
+                    file_name="tcia_dataset_analysis.html",
+                    mime="text/html",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"Could not read HTML report: {e}")
 
 
 # ----------------------------
@@ -1077,89 +1197,104 @@ def admin_page():
         return
 
     st.markdown("---")
-    backend = st.radio(
-        "Storage backend",
-        ["Parquet partitions", "SQLite database"],
+    admin_tool = st.radio(
+        "Admin tool",
+        ["Submissions viewer", "Dataset analyzer"],
         index=0,
     )
 
-    if backend == "Parquet partitions":
-        ptype = st.selectbox(
-            "Proposal Type", ["new_collection", "analysis_results"], index=0
-        )
-        date = st.text_input(
-            "Date partition (YYYY-MM-DD) or leave blank for all", value=""
-        )
-
-        if st.button("Load Submissions", use_container_width=True):
-            records_df = load_records(ptype, date)
-            if records_df is None or records_df.empty:
-                st.warning("No submissions found for the selected filters.")
-            else:
-                st.dataframe(records_df, use_container_width=True)
-                csv = records_df.to_csv(index=False).encode()
-                st.download_button(
-                    "Download CSV",
-                    csv,
-                    file_name=f"tcia_{ptype}_{date or 'all'}.csv",
-                )
-                try:
-                    buf = io.BytesIO()
-                    records_df.to_parquet(
-                        buf, engine=parquet_engine(), index=False
-                    )
-                    st.download_button(
-                        "Download Parquet",
-                        buf.getvalue(),
-                        file_name=f"tcia_{ptype}_{date or 'all'}.parquet",
-                    )
-                except Exception as e:
-                    st.info("Parquet download not available: " + str(e))
-    else:
-        # SQLite admin view
-        ptype = st.selectbox(
-            "Proposal Type",
-            ["", "new_collection", "analysis_results"],
+    if admin_tool == "Submissions viewer":
+        backend = st.radio(
+            "Storage backend",
+            ["Parquet partitions", "SQLite database"],
             index=0,
         )
-        date = st.text_input(
-            "Filter by date (YYYY-MM-DD) or leave blank for all",
-            value="",
-        )
 
-        if st.button("Load Submissions (SQLite)", use_container_width=True):
-            df = query_submissions(
-                ptype if ptype else None, date if date else None
+        if backend == "Parquet partitions":
+            ptype = st.selectbox(
+                "Proposal Type",
+                ["new_collection", "analysis_results"],
+                index=0,
             )
-            if df is None or df.empty:
-                st.warning("No submissions found for the selected filters.")
-                return
-            st.dataframe(df, use_container_width=True)
+            date = st.text_input(
+                "Date partition (YYYY-MM-DD) or leave blank for all", value=""
+            )
 
-            col1, col2 = st.columns(2)
-            with col1:
-                csv = df.to_csv(index=False).encode()
-                st.download_button(
-                    label="Download CSV",
-                    data=csv,
-                    file_name=f"tcia_submissions_{ptype or 'all'}_{date or 'all'}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
-
-            with col2:
-                if os.path.exists(DB_PATH):
-                    with open(DB_PATH, "rb") as f:
-                        db_bytes = f.read()
+            if st.button("Load Submissions", use_container_width=True):
+                records_df = load_records(ptype, date)
+                if records_df is None or records_df.empty:
+                    st.warning("No submissions found for the selected filters.")
+                else:
+                    st.dataframe(records_df, use_container_width=True)
+                    csv = records_df.to_csv(index=False).encode()
                     st.download_button(
-                        label="Download Full Database (.db)",
-                        data=db_bytes,
-                        file_name="submissions.db",
-                        mime="application/octet-stream",
+                        "Download CSV",
+                        csv,
+                        file_name=f"tcia_{ptype}_{date or 'all'}.csv",
+                    )
+                    try:
+                        buf = io.BytesIO()
+                        records_df.to_parquet(
+                            buf, engine=parquet_engine(), index=False
+                        )
+                        st.download_button(
+                            "Download Parquet",
+                            buf.getvalue(),
+                            file_name=f"tcia_{ptype}_{date or 'all'}.parquet",
+                        )
+                    except Exception as e:
+                        st.info("Parquet download not available: " + str(e))
+        else:
+            # SQLite admin view
+            ptype = st.selectbox(
+                "Proposal Type",
+                ["", "new_collection", "analysis_results"],
+                index=0,
+            )
+            date = st.text_input(
+                "Filter by date (YYYY-MM-DD) or leave blank for all",
+                value="",
+            )
+
+            if st.button(
+                "Load Submissions (SQLite)", use_container_width=True
+            ):
+                df = query_submissions(
+                    ptype if ptype else None, date if date else None
+                )
+                if df is None or df.empty:
+                    st.warning("No submissions found for the selected filters.")
+                    return
+                st.dataframe(df, use_container_width=True)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    csv = df.to_csv(index=False).encode()
+                    st.download_button(
+                        label="Download CSV",
+                        data=csv,
+                        file_name=f"tcia_submissions_{ptype or 'all'}_{date or 'all'}.csv",
+                        mime="text/csv",
                         use_container_width=True,
                     )
-                else:
-                    st.info("SQLite database file not found at " + DB_PATH)
+
+                with col2:
+                    if os.path.exists(DB_PATH):
+                        with open(DB_PATH, "rb") as f:
+                            db_bytes = f.read()
+                        st.download_button(
+                            label="Download Full Database (.db)",
+                            data=db_bytes,
+                            file_name="submissions.db",
+                            mime="application/octet-stream",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.info("SQLite database file not found at " + DB_PATH)
+    else:
+        # New dataset analyzer tool
+        run_dataset_analyzer_ui()
+
 
 
 # ----------------------------
