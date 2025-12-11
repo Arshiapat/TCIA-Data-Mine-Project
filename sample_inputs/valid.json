@@ -1,0 +1,9 @@
+{
+  "proposalType": "Analysis Results",
+  "project_title": "Liver Tumor Segmentation",
+  "pi": "Dr. Gray",
+  "email": "gray@uni.edu",
+  "organization": "Metro Health",
+  "modalities": ["CT", "MR", "histology"],
+  "summary": "We propose benchmarking..."
+}
