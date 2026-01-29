@@ -5,6 +5,7 @@ from typing import Dict, Any
 import pandas as pd
 import numpy as np
 import zipfile
+import hashlib
 
 # ============================================================
 # Data Inventory & Standardization: Medical Imaging (DICOM)
@@ -31,7 +32,6 @@ class DataInventoryStandardizer:
             "dicom_summary": self._dicom_summary(root_path)
         }
 
-        # Standardized DICOM output
         self.extract_dicom_series_metadata(
             root_path,
             output_tsv="dicom_series_inventory.tsv",
@@ -105,7 +105,7 @@ class DataInventoryStandardizer:
         """
         Extract standardized series-level metadata.
         One row per SeriesInstanceUID.
-        Optionally create one ZIP file per SeriesInstanceUID.
+        Optionally create one ZIP per SeriesInstanceUID and compute MD5.
         """
         try:
             import pydicom
@@ -122,6 +122,7 @@ class DataInventoryStandardizer:
 
         series_index = {}
         series_files = defaultdict(list)
+        zip_md5_map = {}
 
         for i, path in enumerate(dicom_files):
             if i % 100 == 0:
@@ -153,7 +154,26 @@ class DataInventoryStandardizer:
             except (InvalidDicomError, Exception):
                 continue
 
+        if zip_per_series:
+            print("Creating ZIP files per SeriesInstanceUID...")
+            for series_uid, files in series_files.items():
+                zip_name = f"{series_uid}.zip"
+
+                with zipfile.ZipFile(zip_name, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for f in files:
+                        zf.write(f, arcname=f.name)
+
+                md5 = hashlib.md5()
+                with open(zip_name, "rb") as zf:
+                    for chunk in iter(lambda: zf.read(8192), b""):
+                        md5.update(chunk)
+
+                zip_md5_map[series_uid] = md5.hexdigest()
+
         df = pd.DataFrame(series_index.values())
+
+        if zip_per_series:
+            df["ZipMD5"] = df["SeriesInstanceUID"].map(zip_md5_map)
 
         df.sort_values(
             by=["PatientID", "StudyInstanceUID", "SeriesInstanceUID"],
@@ -163,14 +183,6 @@ class DataInventoryStandardizer:
 
         df.to_csv(output_tsv, sep="\t", index=False)
         print(f"✔ Series-level TSV written to {output_tsv}")
-
-        if zip_per_series:
-            print("Creating ZIP files per SeriesInstanceUID...")
-            for series_uid, files in series_files.items():
-                zip_name = f"{series_uid}.zip"
-                with zipfile.ZipFile(zip_name, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for f in files:
-                        zf.write(f, arcname=f.name)
 
     # -------------------------------
     # Helpers
