@@ -1,9 +1,11 @@
 import json
+import os
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Any
 import pandas as pd
-import numpy as np
+import zipfile
+import hashlib
 
 # ============================================================
 # Data Inventory & Standardization: Medical Imaging (DICOM)
@@ -17,7 +19,7 @@ class DataInventoryStandardizer:
     # Public API
     # -------------------------------
 
-    def analyze_directory(self, root_path: str):
+    def analyze_directory(self, root_path: str, zip_per_series: bool = False):
         root_path = Path(root_path)
         if not root_path.exists():
             raise ValueError(f"Directory does not exist: {root_path}")
@@ -30,10 +32,10 @@ class DataInventoryStandardizer:
             "dicom_summary": self._dicom_summary(root_path)
         }
 
-        # Standardized DICOM output
         self.extract_dicom_series_metadata(
-            root_path,
-            output_tsv="dicom_series_inventory.tsv"
+            root_path=root_path,
+            output_tsv="dicom_series_inventory.tsv",
+            zip_per_series=zip_per_series
         )
 
         return self.inventory
@@ -91,13 +93,18 @@ class DataInventoryStandardizer:
         }
 
     # -------------------------------
-    # STANDARDIZED OUTPUT
+    # STANDARDIZED SERIES OUTPUT
     # -------------------------------
 
-    def extract_dicom_series_metadata(self, root_path: Path, output_tsv: str):
+    def extract_dicom_series_metadata(
+        self,
+        root_path: Path,
+        output_tsv: str,
+        zip_per_series: bool = False
+    ):
         """
-        Extract standardized series-level metadata.
         One row per SeriesInstanceUID.
+        Optionally create one ZIP per SeriesInstanceUID and compute MD5.
         """
         try:
             import pydicom
@@ -113,6 +120,10 @@ class DataInventoryStandardizer:
         print(f"Extracting metadata from {len(dicom_files)} DICOM files...")
 
         series_index = {}
+        series_files = defaultdict(list)
+        slice_thickness_map = defaultdict(set)
+        pixel_spacing_map = defaultdict(set)
+        zip_md5_map = {}
 
         for i, path in enumerate(dicom_files):
             if i % 100 == 0:
@@ -124,6 +135,23 @@ class DataInventoryStandardizer:
                 series_uid = self._safe_get(ds, "SeriesInstanceUID")
                 if not series_uid:
                     continue
+
+                series_files[series_uid].append(path)
+
+                # SliceThickness (0018,0050)
+                if hasattr(ds, "SliceThickness"):
+                    try:
+                        slice_thickness_map[series_uid].add(float(ds.SliceThickness))
+                    except Exception:
+                        pass
+
+                # PixelSpacing (0028,0030)
+                if hasattr(ds, "PixelSpacing"):
+                    try:
+                        spacing = tuple(float(x) for x in ds.PixelSpacing)
+                        pixel_spacing_map[series_uid].add(spacing)
+                    except Exception:
+                        pass
 
                 if series_uid not in series_index:
                     series_index[series_uid] = {
@@ -142,7 +170,46 @@ class DataInventoryStandardizer:
             except (InvalidDicomError, Exception):
                 continue
 
-        df = pd.DataFrame(series_index.values())
+        # -------------------------------
+        # ZIP + MD5 (optional)
+        # -------------------------------
+
+        if zip_per_series:
+            zip_dir = Path("zips")
+            zip_dir.mkdir(exist_ok=True)
+
+            print("Creating ZIP files per SeriesInstanceUID...")
+
+            for series_uid, files in series_files.items():
+                zip_path = zip_dir / f"{series_uid}.zip"
+
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for f in files:
+                        zf.write(f, arcname=f.name)
+
+                md5 = hashlib.md5()
+                with open(zip_path, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(8192), b""):
+                        md5.update(chunk)
+
+                zip_md5_map[series_uid] = md5.hexdigest()
+
+        # -------------------------------
+        # Build TSV
+        # -------------------------------
+
+        rows = []
+        for series_uid, base in series_index.items():
+            row = base.copy()
+            row["SliceThickness"] = sorted(slice_thickness_map.get(series_uid, []))
+            row["PixelSpacing"] = sorted(pixel_spacing_map.get(series_uid, []))
+
+            if zip_per_series:
+                row["ZipMD5"] = zip_md5_map.get(series_uid)
+
+            rows.append(row)
+
+        df = pd.DataFrame(rows)
 
         df.sort_values(
             by=["PatientID", "StudyInstanceUID", "SeriesInstanceUID"],
@@ -181,8 +248,10 @@ if __name__ == "__main__":
     if not folder:
         folder = "."
 
-    inventory = analyzer.analyze_directory(folder)
+    zip_choice = input("Create one ZIP per DICOM Series? (y/n): ").strip().lower()
+    zip_per_series = zip_choice == "y"
+
+    analyzer.analyze_directory(folder, zip_per_series=zip_per_series)
     analyzer.save_inventory()
 
     print("\nData Inventory & Standardization complete.")
-
