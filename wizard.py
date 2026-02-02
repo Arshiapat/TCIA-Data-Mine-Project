@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shlex
 import subprocess
 from datetime import datetime
@@ -22,8 +23,7 @@ from typing import Dict, List, Optional, Tuple
 import requests
 import streamlit as st
 
-OLLAMA_HOST = "http://127.0.0.1:11434"
-
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
 # ----------------------------
 # Wizard section map (1-week draft)
@@ -79,12 +79,24 @@ REVIEW_KEY = "__review__"
 # ----------------------------
 # Ollama caller (copied from app.py style, simplified)
 # ----------------------------
-def call_ollama(model: str, prompt: str, temperature: float = 0.2, num_predict: int = 450) -> str:
+def call_ollama(
+    model: str,
+    prompt: str,
+    temperature: float = 0.2,
+    num_predict: int = 400,
+    timeout_s: int = 120,
+) -> str:
     """
-    1) Try /api/chat
-    2) Fallback to /api/generate streaming
+    1) Try /api/chat (non-stream)
+    2) Fallback to /api/generate (stream)
     3) Fallback to CLI
+    Returns a readable error string instead of failing silently.
     """
+
+    model = (model or "").strip()
+    if not model:
+        return "[Ollama error] Model name is empty."
+
     # 1) /api/chat
     try:
         resp = requests.post(
@@ -95,18 +107,27 @@ def call_ollama(model: str, prompt: str, temperature: float = 0.2, num_predict: 
                 "options": {"temperature": temperature, "num_predict": num_predict},
                 "stream": False,
             },
-            timeout=120,
+            timeout=timeout_s,
         )
+
         if resp.status_code == 200:
             data = resp.json()
-            if "message" in data and "content" in data["message"]:
-                return (data["message"]["content"] or "").strip()
-            if "response" in data:
-                return (data["response"] or "").strip()
-        elif resp.status_code != 404:
-            resp.raise_for_status()
-    except Exception:
-        pass
+            # Ollama chat usually returns {"message": {"role": "...", "content": "..."}, ...}
+            if isinstance(data, dict):
+                msg = data.get("message") or {}
+                if isinstance(msg, dict) and "content" in msg:
+                    return (msg.get("content") or "").strip()
+                if "response" in data:
+                    return (data.get("response") or "").strip()
+            return "[Ollama error] Unexpected /api/chat response format."
+
+        if resp.status_code != 404:
+            return f"[Ollama error] /api/chat HTTP {resp.status_code}: {resp.text[:300]}"
+
+    except Exception as e:
+        chat_err = str(e)
+    else:
+        chat_err = None
 
     # 2) /api/generate streaming
     try:
@@ -119,8 +140,9 @@ def call_ollama(model: str, prompt: str, temperature: float = 0.2, num_predict: 
                 "stream": True,
             },
             stream=True,
-            timeout=120,
+            timeout=timeout_s,
         )
+
         if r.status_code == 200:
             chunks = []
             for line in r.iter_lines(decode_unicode=True):
@@ -130,35 +152,55 @@ def call_ollama(model: str, prompt: str, temperature: float = 0.2, num_predict: 
                     obj = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+
                 if obj.get("error"):
                     return f"[Ollama error] {obj['error']}"
-                if "response" in obj:
+
+                # generate endpoint emits "response" chunks
+                if "response" in obj and obj["response"] is not None:
                     chunks.append(obj["response"])
-                elif "message" in obj and "content" in obj["message"]:
-                    chunks.append(obj["message"]["content"])
+
+                # stop if "done" appears
+                if obj.get("done") is True:
+                    break
+
             out = "".join(chunks).strip()
             return out or "[empty response]"
-        elif r.status_code != 404:
-            r.raise_for_status()
-    except Exception:
-        pass
+
+        if r.status_code != 404:
+            return f"[Ollama error] /api/generate HTTP {r.status_code}: {r.text[:300]}"
+
+    except Exception as e:
+        gen_err = str(e)
+    else:
+        gen_err = None
 
     # 3) CLI fallback
     try:
-        cmd = f"ollama run {shlex.quote(model)}"
+        cmd = ["ollama", "run", model]
         result = subprocess.run(
             cmd,
-            input=prompt.encode("utf-8"),
+            input=prompt,
+            text=True,
             capture_output=True,
             timeout=180,
-            shell=True,
         )
         if result.returncode != 0:
-            return "[Ollama error] " + result.stderr.decode(errors="ignore").strip()
-        return result.stdout.decode(errors="ignore").strip()
-    except Exception as e:
-        return f"[Ollama error] {e}"
+            err = (result.stderr or "").strip()
+            return "[Ollama error] " + (err or "CLI call failed.")
+        return (result.stdout or "").strip()
 
+    except Exception as e:
+        cli_err = str(e)
+
+    # If we got here, everything failed. Return the most useful error(s).
+    bits = []
+    if chat_err:
+        bits.append(f"chat: {chat_err}")
+    if gen_err:
+        bits.append(f"generate: {gen_err}")
+    bits.append(f"host: {OLLAMA_HOST}")
+    return "[Ollama error] All methods failed. " + " | ".join(bits)
 
 # ----------------------------
 # Prompting
@@ -245,8 +287,14 @@ def _init_state():
         st.session_state.wizard_answers = {s["key"]: "" for s in SECTIONS}
     if "wizard_feedback" not in st.session_state:
         st.session_state.wizard_feedback = {s["key"]: "" for s in SECTIONS}
+
+    # NEW: dialog state
+    if "wizard_show_feedback_dialog" not in st.session_state:
+        st.session_state.wizard_show_feedback_dialog = False
+    if "wizard_feedback_section_key" not in st.session_state:
+        st.session_state.wizard_feedback_section_key = ""
+
     if "prefill" not in st.session_state:
-        # Safe fallback if app.py did not create it for some reason
         st.session_state.prefill = {
             "proposal_type": "new_collection",
             "email": "",
@@ -269,6 +317,9 @@ def _is_review_step(step_idx: int) -> bool:
 # ----------------------------
 def wizard_page():
     _init_state()
+
+    if st.session_state.wizard_show_feedback_dialog:
+        _feedback_dialog()
 
     st.title("Dataset Description Wizard")
     st.caption(
@@ -340,6 +391,16 @@ def wizard_page():
     # AI feedback block
     st.markdown("#### AI feedback (optional)")
     model = st.text_input("Local model name", value="llama3.2:3b", key="wizard_model_name")
+
+    with st.expander("Troubleshoot Ollama connection"):
+        if st.button("Test connection"):
+            try:
+                t = requests.get(f"{OLLAMA_HOST}/api/tags", timeout=10)
+                st.write("Status:", t.status_code)
+                st.json(t.json() if t.status_code == 200 else {"body": t.text[:500]})
+            except Exception as e:
+                st.error(str(e))
+
     cols = st.columns([1, 1, 2])
     with cols[0]:
         run_ai = st.button("Get AI feedback", use_container_width=True)
@@ -358,6 +419,11 @@ def wizard_page():
             with st.spinner("Running local AI feedback..."):
                 out = call_ollama(model=model.strip(), prompt=prompt, temperature=0.2)
             st.session_state.wizard_feedback[key] = out
+
+            # NEW: pop the feedback dialog immediately
+            _open_feedback_dialog(key)
+            st.rerun()
+
 
     fb = (st.session_state.wizard_feedback.get(key) or "").strip()
     if fb:
@@ -404,6 +470,47 @@ def wizard_page():
         if next_disabled:
             st.caption("This step is required before continuing.")
 
+def _open_feedback_dialog(section_key: str):
+    st.session_state.wizard_feedback_section_key = section_key
+    st.session_state.wizard_show_feedback_dialog = True
+
+
+@st.dialog("AI feedback")
+def _feedback_dialog():
+    key = st.session_state.wizard_feedback_section_key
+    fb = (st.session_state.wizard_feedback.get(key) or "").strip()
+
+    if not fb:
+        st.info("No feedback to show.")
+        if st.button("Close", use_container_width=True):
+            st.session_state.wizard_show_feedback_dialog = False
+            st.rerun()
+        return
+
+    st.text_area("Feedback", fb, height=260)
+
+    rewrite = _extract_rewrite(fb)
+    if rewrite:
+        st.markdown("#### Suggested rewrite")
+        st.text_area("Rewrite", rewrite, height=200, key=f"dialog_rewrite_{key}")
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        # Accept: replace the user's draft with the rewrite if available,
+        # otherwise do nothing except close.
+        if st.button("Accept", type="primary", use_container_width=True):
+            if rewrite:
+                st.session_state.wizard_answers[key] = rewrite
+                st.session_state[f"wizard_input_{key}"] = rewrite
+            st.session_state.wizard_show_feedback_dialog = False
+            st.rerun()
+
+    with c2:
+        # Decline: keep draft as-is, just close.
+        if st.button("Decline", use_container_width=True):
+            st.session_state.wizard_show_feedback_dialog = False
+            st.rerun()
 
 def _extract_rewrite(feedback_text: str) -> str:
     """
@@ -495,3 +602,5 @@ def _safe_filename(name: str) -> str:
 if __name__ == "__main__":
     wizard_page()
 
+#Once the AI is done, it's output will be put in an extra box that shows up.
+#From there, there is an accept or decline button that will either replace the text area with the AI output or leave it as is.
