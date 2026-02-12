@@ -1,19 +1,9 @@
-
 # ui/wizard.py
-# Dataset Description Wizard (CICADAS-style) for TCIA submissions
-#
-# Self-contained Streamlit wizard with:
-# - step-by-step drafting
-# - optional local AI feedback (Ollama)
-# - session-state persistence
-# - export to SQLite database (.db)
-#
-# NOTE: DOCX export has been intentionally removed.
+# CICADAS-Compliant Dataset Description Wizard (TCIA)
 
 from __future__ import annotations
 
 import io
-import json
 import shlex
 import subprocess
 import sqlite3
@@ -27,56 +17,63 @@ OLLAMA_HOST = "http://127.0.0.1:11434"
 
 
 # ----------------------------
-# Wizard section map
+# CICADAS section map (STRICT)
 # ----------------------------
 SECTIONS: List[dict] = [
     {
         "key": "title",
         "label": "Title",
-        "guidance": "A clear, descriptive dataset name. Avoid vague titles.",
-        "placeholder": "Example: Multi-institutional CT imaging dataset for lung nodule detection (2018–2023)",
+        "guidance": "Full descriptive dataset title. Avoid abbreviations.",
         "required": True,
     },
     {
         "key": "abstract",
         "label": "Abstract",
-        "guidance": "2–5 sentences summarizing the dataset and its purpose.",
-        "placeholder": "High-level description of the dataset.",
+        "guidance": "≤1000 characters. Include subject count, modalities, and intended use.",
+        "required": True,
+        "max_chars": 1000,
+    },
+    {
+        "key": "introduction",
+        "label": "Introduction",
+        "guidance": "Scientific background, motivation, and uniqueness of the dataset.",
         "required": True,
     },
     {
-        "key": "background",
-        "label": "Background / Rationale",
-        "guidance": "Why the dataset exists and what gap it addresses.",
-        "placeholder": "Scientific or clinical motivation.",
-        "required": False,
-    },
-    {
-        "key": "contents",
-        "label": "Dataset Contents",
-        "guidance": "What files and formats are included.",
-        "placeholder": "DICOM, CSV, segmentations, reports, etc.",
+        "key": "methods_subjects",
+        "label": "Methods – Subject Selection",
+        "guidance": "Inclusion/exclusion criteria, cohort definition, IRB status if applicable.",
         "required": True,
     },
     {
-        "key": "cohort",
-        "label": "Cohort / Subjects",
-        "guidance": "Who or what is represented in the dataset.",
-        "placeholder": "Inclusion/exclusion criteria at a high level.",
+        "key": "methods_acquisition",
+        "label": "Methods – Data Acquisition",
+        "guidance": "Imaging modalities, scanners, protocols, resolution, acquisition parameters.",
         "required": True,
     },
     {
-        "key": "labels",
-        "label": "Labels / Outcomes / Annotations",
-        "guidance": "Describe labels and how they were generated.",
-        "placeholder": "Annotation process and label definitions.",
+        "key": "methods_analysis",
+        "label": "Methods – Data Analysis & Annotation",
+        "guidance": "Preprocessing, labeling, annotation workflow, quality control.",
+        "required": True,
+    },
+    {
+        "key": "usage_notes",
+        "label": "Usage Notes",
+        "guidance": "Folder structure, caveats, known issues, recommended tools.",
+        "required": True,
+    },
+    {
+        "key": "external_resources",
+        "label": "External Resources",
+        "guidance": "Related publications, code repositories, external datasets (optional).",
         "required": False,
     },
 ]
 
 
 # ----------------------------
-# Session state initialization
+# Session state
 # ----------------------------
 def _init_state():
     if "wizard_step" not in st.session_state:
@@ -85,20 +82,8 @@ def _init_state():
     if "wizard_answers" not in st.session_state:
         st.session_state.wizard_answers = {s["key"]: "" for s in SECTIONS}
 
-    if "wizard_feedback" not in st.session_state:
-        st.session_state.wizard_feedback = {s["key"]: "" for s in SECTIONS}
-
-    if "prefill" not in st.session_state:
-        st.session_state.prefill = {
-            "proposal_type": "new_collection",
-            "email": "",
-            "dataset_title": "",
-            "dataset_description": "",
-        }
-
-
-def _total_steps() -> int:
-    return len(SECTIONS) + 1
+    if "ai_rewrite" not in st.session_state:
+        st.session_state.ai_rewrite = {s["key"]: "" for s in SECTIONS}
 
 
 def _is_review(step: int) -> bool:
@@ -108,79 +93,91 @@ def _is_review(step: int) -> bool:
 # ----------------------------
 # Ollama helper
 # ----------------------------
-def call_ollama(model: str, prompt: str, temperature: float = 0.2, num_predict: int = 450) -> str:
+def call_ollama(model: str, prompt: str) -> str:
     try:
         resp = requests.post(
             f"{OLLAMA_HOST}/api/chat",
             json={
                 "model": model,
                 "messages": [{"role": "user", "content": prompt}],
-                "options": {"temperature": temperature, "num_predict": num_predict},
                 "stream": False,
             },
             timeout=120,
         )
         if resp.status_code == 200:
-            data = resp.json()
-            return (data.get("message", {}).get("content") or data.get("response") or "").strip()
+            return resp.json()["message"]["content"].strip()
     except Exception:
         pass
 
-    try:
-        cmd = f"ollama run {shlex.quote(model)}"
-        result = subprocess.run(
-            cmd,
-            input=prompt.encode("utf-8"),
-            capture_output=True,
-            timeout=180,
-            shell=True,
-        )
-        return result.stdout.decode(errors="ignore").strip()
-    except Exception as e:
-        return f"[Ollama error] {e}"
+    cmd = f"ollama run {shlex.quote(model)}"
+    result = subprocess.run(
+        cmd,
+        input=prompt.encode(),
+        capture_output=True,
+        shell=True,
+    )
+    return result.stdout.decode(errors="ignore").strip()
 
 
-def feedback_prompt(label: str, text: str) -> str:
-    return f"""
-You are an expert technical editor helping an investigator write a dataset description.
+def sanitize_ai_reply(text: str) -> str:
+    """Strip common explanatory prefixes from the model's reply.
 
-Section: {label}
+    Ollama models often prepend things like "Here is the rewritten section:" or
+    "Below is the revised version:" before the actual rewrite.  This helper
+    removes any such boilerplate so we store just the cleaned section.
+    """
+    if not text:
+        return text
+    import re
+    # Look for prefixes like "Here is the rewritten section:" and strip them.
+    # Use DOTALL so the pattern can match across lines if needed.
+    patterns = [
+        r"(?i).*?rewritten? section:\s*",
+        r"(?i).*?revised version:\s*",
+        r"(?i).*?revision:\s*",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text, re.DOTALL)
+        if m:
+            text = text[m.end():]
+            break
+    return text.strip()
+
+# ----------------------------
+# Original cicadas_rewrite_prompt (kept for reference):
+# def cicadas_rewrite_prompt(section: dict, text: str) -> str:
+#     return f"""..."""
+
+# Fixed prompt generator that uses "Original section" and logs the prompt
+# to help diagnose mysterious responses from Ollama.
+def cicadas_rewrite_prompt_fixed(section: dict, text: str) -> str:
+    prompt = f"""
+You are preparing a dataset description for submission to The Cancer Imaging Archive (TCIA).
+
+Rewrite ONLY the section below to strictly comply with CICADAS expectations.
 
 Rules:
-- Do not invent details.
-- Ask for missing information explicitly.
-- Be concise and professional.
+- Do NOT invent or assume information
+- Use clear technical language
+- Remove vague phrases
+- Preserve factual content
+- Use short paragraphs or bullet points where appropriate
 
-Output format:
-Missing:
-Suggestions:
-Rewrite:
+Section: {section['label']}
+Guidance: {section['guidance']}
 
-Text:
+Original section:
 \"\"\"{text}\"\"\"
+
+Rewritten CICADAS-compliant version:
 """.strip()
-
-
-# ----------------------------
-# Compilation helpers
-# ----------------------------
-def compile_for_submit(answers: Dict[str, str]) -> str:
-    blocks = []
-    for s in SECTIONS:
-        val = (answers.get(s["key"]) or "").strip()
-        if val:
-            blocks.append(f"{s['label']}:\n{val}\n")
-    return "\n".join(blocks).strip()
-
+    print("[DEBUG] cicadas rewrite prompt:\n", prompt)
+    return prompt
 
 # ----------------------------
 # SQLite export
 # ----------------------------
 def build_sqlite_db_bytes(answers: Dict[str, str]) -> bytes:
-    """
-    Build an in-memory SQLite database containing the wizard responses
-    and return it as raw bytes for download.
-    """
     buf = io.BytesIO()
     conn = sqlite3.connect(":memory:")
     cur = conn.cursor()
@@ -189,7 +186,7 @@ def build_sqlite_db_bytes(answers: Dict[str, str]) -> bytes:
 
     cur.execute(
         f"""
-        CREATE TABLE dataset_description (
+        CREATE TABLE cicadas_dataset_description (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT,
             {columns}
@@ -197,11 +194,9 @@ def build_sqlite_db_bytes(answers: Dict[str, str]) -> bytes:
         """
     )
 
-    values = [answers.get(s["key"], "") for s in SECTIONS]
-
     cur.execute(
         f"""
-        INSERT INTO dataset_description (
+        INSERT INTO cicadas_dataset_description (
             created_at,
             {", ".join(s["key"] for s in SECTIONS)}
         )
@@ -210,13 +205,13 @@ def build_sqlite_db_bytes(answers: Dict[str, str]) -> bytes:
             {", ".join("?" for _ in SECTIONS)}
         )
         """,
-        [datetime.now().isoformat()] + values,
+        [datetime.now().isoformat()] + [answers[s["key"]] for s in SECTIONS],
     )
 
     conn.commit()
 
     for line in conn.iterdump():
-        buf.write(f"{line}\n".encode("utf-8"))
+        buf.write(f"{line}\n".encode())
 
     conn.close()
     buf.seek(0)
@@ -224,23 +219,13 @@ def build_sqlite_db_bytes(answers: Dict[str, str]) -> bytes:
 
 
 # ----------------------------
-# Utilities
-# ----------------------------
-def _safe_filename(name: str) -> str:
-    keep = [c for c in name if c.isalnum() or c in (" ", "_", "-")]
-    return "".join(keep).strip().replace(" ", "_")[:80] or "dataset_description"
-
-
-# ----------------------------
 # Main UI
 # ----------------------------
 def wizard_page():
     _init_state()
-
-    st.title("Dataset Description Wizard")
-    st.caption("Step-by-step CICADAS-style drafting with export to SQLite.")
-
     step = st.session_state.wizard_step
+
+    st.title("CICADAS Dataset Description Wizard")
 
     if _is_review(step):
         _render_review()
@@ -255,30 +240,48 @@ def wizard_page():
     text = st.text_area(
         "Your draft",
         value=st.session_state.wizard_answers[key],
-        placeholder=section["placeholder"],
         height=220,
     )
 
+    if "max_chars" in section:
+        st.caption(f"Characters: {len(text)} / {section['max_chars']}")
+
     st.session_state.wizard_answers[key] = text
 
-    st.markdown("#### AI feedback (optional)")
-    model = st.text_input("Local model", value="llama3.2:3b")
+    st.markdown("### AI rewrite (CICADAS-compliant)")
+    model = st.text_input("Ollama model", value="llama3.2:3b")
 
     if st.button("Get AI feedback"):
         if text.strip():
-            prompt = feedback_prompt(section["label"], text)
-            with st.spinner("Running AI feedback..."):
-                st.session_state.wizard_feedback[key] = call_ollama(model, prompt)
+            with st.spinner("Generating CICADAS rewrite..."):
+                prompt = cicadas_rewrite_prompt_fixed(section, text)
+                raw = call_ollama(model, prompt)
+                st.session_state.ai_rewrite[key] = sanitize_ai_reply(raw)
         else:
-            st.warning("Add text before requesting feedback.")
+            st.warning("Add text before requesting AI rewrite.")
 
-    if st.session_state.wizard_feedback[key]:
-        st.text_area("Feedback", st.session_state.wizard_feedback[key], height=200)
+    ai_text = st.session_state.ai_rewrite[key]
+
+    if ai_text:
+        st.text_area("AI revised version", ai_text, height=220)
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("Accept AI version"):
+                st.session_state.wizard_answers[key] = ai_text
+                st.session_state.ai_rewrite[key] = ""
+                st.session_state.wizard_step += 1
+                st.rerun()
+
+        with col_b:
+            if st.button("Reject AI version"):
+                st.session_state.ai_rewrite[key] = ""
+                st.session_state.wizard_step += 1
+                st.rerun()
 
     st.markdown("---")
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("Back", disabled=step == 0):
             st.session_state.wizard_step -= 1
@@ -294,40 +297,17 @@ def wizard_page():
 def _render_review():
     st.subheader("Review & Export")
 
-    answers = st.session_state.wizard_answers
-
     for s in SECTIONS:
-        st.markdown(f"### {s['label']}")
-        st.write(answers.get(s["key"]) or "[TBD]")
+        st.markdown(f"## {s['label']}")
+        st.write(st.session_state.wizard_answers[s["key"]] or "[Not provided]")
 
-    compiled = compile_for_submit(answers)
-    st.markdown("### Combined text")
-    st.text_area("Combined", compiled, height=200)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("Back"):
-            st.session_state.wizard_step = len(SECTIONS) - 1
-            st.rerun()
-
-    with col2:
-        if st.button("Prefill Submit"):
-            st.session_state.prefill["dataset_title"] = answers.get("title", "")
-            st.session_state.prefill["dataset_description"] = compiled
-            st.success("Submit page prefilled.")
-
-    with col3:
-        safe = _safe_filename(answers.get("title", "dataset_description"))
-
-        st.download_button(
-            "Download responses (.db)",
-            build_sqlite_db_bytes(answers),
-            file_name=f"{safe}.db",
-            mime="application/x-sqlite3",
-        )
+    st.download_button(
+        "Download CICADAS responses (.db)",
+        build_sqlite_db_bytes(st.session_state.wizard_answers),
+        file_name="cicadas_dataset_description.db",
+        mime="application/x-sqlite3",
+    )
 
 
 if __name__ == "__main__":
     wizard_page()
-#```
