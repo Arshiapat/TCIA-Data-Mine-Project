@@ -7,18 +7,19 @@
 #   nav = st.sidebar.radio("Navigation", ["Submit", "Dataset Wizard", "Admin"], index=0)
 #   if nav == "Dataset Wizard": wizard_page()
 #
-# This file is intentionally self-contained for a 1-week draft.
-# You can later refactor call_ollama + prompts into common/ai.py.
+# Notes:
+# - AI output is treated as the rewrite directly (no "Rewrite:" parsing).
+# - Accept replaces the current draft field immediately.
+# - Dialog state is closed on Accept/Decline and on Back/Next to prevent bleed across sections.
+# - Widget keys are the source of truth (no value= + session_state conflict).
+# - DOCX export removed (prefill Submit page is the target flow).
 
 from __future__ import annotations
 
-import io
 import json
 import os
-import shlex
 import subprocess
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import requests
 import streamlit as st
@@ -26,7 +27,7 @@ import streamlit as st
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
 # ----------------------------
-# Wizard section map (1-week draft)
+# Wizard section map
 # ----------------------------
 SECTIONS: List[dict] = [
     {
@@ -73,29 +74,28 @@ SECTIONS: List[dict] = [
     },
 ]
 
-REVIEW_KEY = "__review__"
-
-
 # ----------------------------
-# Ollama caller (copied from app.py style, simplified)
+# Ollama caller
 # ----------------------------
 def call_ollama(
     model: str,
     prompt: str,
     temperature: float = 0.2,
-    num_predict: int = 400,
+    num_predict: int = 220,
     timeout_s: int = 120,
 ) -> str:
     """
     1) Try /api/chat (non-stream)
     2) Fallback to /api/generate (stream)
-    3) Fallback to CLI
+    3) Fallback to CLI (ollama run <model>)
     Returns a readable error string instead of failing silently.
     """
 
     model = (model or "").strip()
     if not model:
         return "[Ollama error] Model name is empty."
+
+    options = {"temperature": temperature, "num_predict": num_predict, "num_ctx": 2048}
 
     # 1) /api/chat
     try:
@@ -104,7 +104,7 @@ def call_ollama(
             json={
                 "model": model,
                 "messages": [{"role": "user", "content": prompt}],
-                "options": {"temperature": temperature, "num_predict": num_predict},
+                "options": options,
                 "stream": False,
             },
             timeout=timeout_s,
@@ -112,7 +112,6 @@ def call_ollama(
 
         if resp.status_code == 200:
             data = resp.json()
-            # Ollama chat usually returns {"message": {"role": "...", "content": "..."}, ...}
             if isinstance(data, dict):
                 msg = data.get("message") or {}
                 if isinstance(msg, dict) and "content" in msg:
@@ -129,14 +128,14 @@ def call_ollama(
     else:
         chat_err = None
 
-    # 2) /api/generate streaming
+    # 2) /api/generate (stream)
     try:
         r = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
                 "model": model,
                 "prompt": prompt,
-                "options": {"temperature": temperature, "num_predict": num_predict},
+                "options": options,
                 "stream": True,
             },
             stream=True,
@@ -156,11 +155,9 @@ def call_ollama(
                 if obj.get("error"):
                     return f"[Ollama error] {obj['error']}"
 
-                # generate endpoint emits "response" chunks
                 if "response" in obj and obj["response"] is not None:
                     chunks.append(obj["response"])
 
-                # stop if "done" appears
                 if obj.get("done") is True:
                     break
 
@@ -193,39 +190,102 @@ def call_ollama(
     except Exception as e:
         cli_err = str(e)
 
-    # If we got here, everything failed. Return the most useful error(s).
     bits = []
     if chat_err:
         bits.append(f"chat: {chat_err}")
     if gen_err:
         bits.append(f"generate: {gen_err}")
     bits.append(f"host: {OLLAMA_HOST}")
+    bits.append(f"cli: {cli_err}")
     return "[Ollama error] All methods failed. " + " | ".join(bits)
+
 
 # ----------------------------
 # Prompting
 # ----------------------------
-def feedback_prompt(section_label: str, section_text: str) -> str:
+def _section_hard_constraints(section_key: str) -> str:
+    if section_key == "title":
+        return (
+            "Hard constraints for Title:\n"
+            "- Output a single line only.\n"
+            "- Do NOT include labels like 'Dataset Name' or 'CICADAS Dataset Name'.\n"
+            "- Do NOT use colons.\n"
+            "- No bullets, no headings, no code blocks.\n"
+        )
+    if section_key == "abstract":
+        return (
+            "Hard constraints for Abstract:\n"
+            "- Output 2 to 5 sentences as one paragraph.\n"
+            "- No bullets.\n"
+        )
+    return ""
+
+
+def feedback_prompt(section_key: str, section_label: str, section_text: str, section_guidance: str = "") -> str:
     section_text = (section_text or "").strip()
+    section_guidance = (section_guidance or "").strip()
+    hard = _section_hard_constraints(section_key)
+
     return f"""
-You are an expert technical editor helping an investigator write a dataset description in CICADAS style.
+You are an expert technical editor for The Cancer Imaging Archive (TCIA).
+You are rewriting the user's text to be clearer, more specific, and more informative, using only the information they provided.
+
+CICADAS is the standardized dataset description format used by TCIA to ensure clarity, reproducibility, and reuse of shared imaging datasets.
 
 Section to improve: {section_label}
 
-Rules:
-- Do not invent specifics (counts, dates, scanner models, institutions) that are not present.
-- If key info is missing, ask for it explicitly.
-- Use clear professional language.
-- Keep the response compact and actionable.
+Section requirements:
+{section_guidance if section_guidance else "Follow standard CICADAS-style expectations for this section."}
 
-Output format (use these headings exactly):
-Missing:
-Suggestions:
-Rewrite:
+{hard}
 
-Text to review:
+STRICT RULES:
+- Output ONLY the rewritten text for this section.
+- Do NOT add explanations, commentary, or multiple options.
+- Do NOT add labels, headings, or formatting.
+- Do NOT use Markdown or code blocks.
+- Do NOT invent or assume specifics (counts, dates, scanner models, institutions, outcomes).
+- If something is vague, improve clarity using general language, without adding new facts.
+- The rewrite must not be less informative than the input.
+- Keep content limited to this section only.
+
+Text to rewrite:
 \"\"\"{section_text}\"\"\"
 """.strip()
+
+
+def _clean_model_output(section_key: str, text: str) -> str:
+    """Final safety net cleanup, especially for Title."""
+    t = (text or "").strip()
+    if not t:
+        return ""
+
+    # Remove code fences if the model ignores instructions
+    t = t.replace("```", "").strip()
+
+    # Remove common label prefixes
+    prefixes = [
+        "CICADAS Dataset Name:",
+        "Dataset Name:",
+        "CICADAS Title:",
+        "Title:",
+        "CICADAS Dataset Name -",
+        "Dataset Name -",
+        "CICADAS Title -",
+        "Title -",
+    ]
+    for p in prefixes:
+        if t.startswith(p):
+            t = t[len(p):].strip()
+
+    if section_key == "title":
+        # Keep only first line
+        t = t.splitlines()[0].strip()
+        # If it still contains a colon label pattern, take the part after the last colon
+        if ":" in t:
+            t = t.split(":")[-1].strip()
+
+    return t.strip()
 
 
 def compile_for_submit(answers: Dict[str, str]) -> str:
@@ -241,56 +301,26 @@ def compile_for_submit(answers: Dict[str, str]) -> str:
 
 
 # ----------------------------
-# DOCX export
-# ----------------------------
-def build_docx_bytes(
-    answers: Dict[str, str],
-    title_fallback: str = "Dataset Description",
-) -> bytes:
-    """
-    Requires python-docx to be installed.
-    """
-    try:
-        from docx import Document
-    except Exception as e:
-        raise RuntimeError("python-docx is required for Word export") from e
-
-    doc = Document()
-
-    title = (answers.get("title") or "").strip() or title_fallback
-    doc.add_heading(title, level=0)
-    doc.add_paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
-    doc.add_paragraph("")
-
-    for s in SECTIONS:
-        k = s["key"]
-        doc.add_heading(s["label"], level=1)
-        val = (answers.get(k) or "").strip()
-        if val:
-            doc.add_paragraph(val)
-        else:
-            doc.add_paragraph("[TBD]")
-
-    buf = io.BytesIO()
-    doc.save(buf)
-    return buf.getvalue()
-
-
-# ----------------------------
 # Session state helpers
 # ----------------------------
+def _close_feedback_dialog_state():
+    st.session_state.wizard_show_feedback_dialog = False
+    st.session_state.wizard_feedback_section_key = ""
+
+
 def _init_state():
     if "wizard_step" not in st.session_state:
         st.session_state.wizard_step = 0
+
     if "wizard_answers" not in st.session_state:
         st.session_state.wizard_answers = {s["key"]: "" for s in SECTIONS}
+
     if "wizard_feedback" not in st.session_state:
         st.session_state.wizard_feedback = {s["key"]: "" for s in SECTIONS}
 
-    # NEW: dialog state
     if "wizard_show_feedback_dialog" not in st.session_state:
         st.session_state.wizard_show_feedback_dialog = False
+
     if "wizard_feedback_section_key" not in st.session_state:
         st.session_state.wizard_feedback_section_key = ""
 
@@ -302,9 +332,15 @@ def _init_state():
             "dataset_description": "",
         }
 
+    # Widget keys are the source of truth
+    for s in SECTIONS:
+        k = s["key"]
+        widget_key = f"wizard_input_{k}"
+        if widget_key not in st.session_state:
+            st.session_state[widget_key] = st.session_state.wizard_answers.get(k, "")
+
 
 def _current_total_steps() -> int:
-    # sections + review step
     return len(SECTIONS) + 1
 
 
@@ -318,23 +354,23 @@ def _is_review_step(step_idx: int) -> bool:
 def wizard_page():
     _init_state()
 
-    if st.session_state.wizard_show_feedback_dialog:
+    if st.session_state.wizard_show_feedback_dialog and st.session_state.wizard_feedback_section_key:
         _feedback_dialog()
 
     st.title("Dataset Description Wizard")
     st.caption(
-        "Step-by-step CICADAS-style drafting with local AI feedback. "
-        "At the end you can export to Word and prefill the main Submit form."
+        "Step-by-step CICADAS-style drafting with local AI rewrite. "
+        "At the end you can prefill the main Submit form."
     )
 
-    # Sidebar helper panel (works alongside app.py sidebar nav)
+    # Sidebar helper panel
     with st.sidebar:
         st.markdown("### Wizard Progress")
         total = _current_total_steps()
         step = int(st.session_state.wizard_step)
         st.write(f"Step {min(step + 1, total)} of {total}")
 
-        labels = [s["label"] for s in SECTIONS] + ["Review & Export"]
+        labels = [s["label"] for s in SECTIONS] + ["Review & Prefill"]
         for i, lab in enumerate(labels):
             marker = "➡️ " if i == step else ""
             st.write(f"{marker}{lab}")
@@ -343,12 +379,17 @@ def wizard_page():
         col_a, col_b = st.columns(2)
         with col_a:
             if st.button("Reset wizard", use_container_width=True):
+                _close_feedback_dialog_state()
                 st.session_state.wizard_step = 0
                 st.session_state.wizard_answers = {s["key"]: "" for s in SECTIONS}
                 st.session_state.wizard_feedback = {s["key"]: "" for s in SECTIONS}
+                for s in SECTIONS:
+                    st.session_state[f"wizard_input_{s['key']}"] = ""
                 st.rerun()
+
         with col_b:
             if st.button("Load example", use_container_width=True):
+                _close_feedback_dialog_state()
                 st.session_state.wizard_answers.update(
                     {
                         "title": "Example: Multi-site imaging dataset for [TBD] application",
@@ -361,13 +402,16 @@ def wizard_page():
                         "labels": "Labels include [TBD] and were produced by [TBD]. Definitions: [TBD].",
                     }
                 )
+                for s in SECTIONS:
+                    k = s["key"]
+                    st.session_state[f"wizard_input_{k}"] = st.session_state.wizard_answers.get(k, "")
                 st.rerun()
 
     step = int(st.session_state.wizard_step)
     total = _current_total_steps()
 
     if _is_review_step(step):
-        _render_review_and_export()
+        _render_review_and_prefill()
         return
 
     section = SECTIONS[step]
@@ -377,20 +421,20 @@ def wizard_page():
     if section.get("guidance"):
         st.info(section["guidance"])
 
-    text_val = st.text_area(
+    st.text_area(
         "Your draft",
-        value=st.session_state.wizard_answers.get(key, ""),
         placeholder=section.get("placeholder", ""),
         height=220,
         key=f"wizard_input_{key}",
     )
 
-    # Persist on each run
-    st.session_state.wizard_answers[key] = text_val
+    # Sync widget -> wizard_answers
+    st.session_state.wizard_answers[key] = (st.session_state.get(f"wizard_input_{key}") or "").strip()
+    text_val = st.session_state.wizard_answers[key]
 
-    # AI feedback block
-    st.markdown("#### AI feedback (optional)")
-    model = st.text_input("Local model name", value="llama3.2:3b", key="wizard_model_name")
+    # AI block
+    st.markdown("#### AI rewrite (optional)")
+    model = st.text_input("Local model name", value="llama3.2:1b", key="wizard_model_name")
 
     with st.expander("Troubleshoot Ollama connection"):
         if st.button("Test connection"):
@@ -403,51 +447,44 @@ def wizard_page():
 
     cols = st.columns([1, 1, 2])
     with cols[0]:
-        run_ai = st.button("Get AI feedback", use_container_width=True)
+        run_ai = st.button("Get AI rewrite", use_container_width=True)
     with cols[1]:
-        clear_ai = st.button("Clear feedback", use_container_width=True)
+        clear_ai = st.button("Clear AI rewrite", use_container_width=True)
 
     if clear_ai:
         st.session_state.wizard_feedback[key] = ""
+        _close_feedback_dialog_state()
         st.rerun()
 
     if run_ai:
         if not (text_val or "").strip():
-            st.warning("Add some text first, then run feedback.")
+            st.warning("Add some text first, then run AI rewrite.")
         else:
-            prompt = feedback_prompt(section["label"], text_val)
-            with st.spinner("Running local AI feedback..."):
+            prompt = feedback_prompt(key, section["label"], text_val, section.get("guidance", ""))
+            with st.spinner("Running local AI rewrite..."):
                 out = call_ollama(model=model.strip(), prompt=prompt, temperature=0.2)
-            st.session_state.wizard_feedback[key] = out
+            out = _clean_model_output(key, out)
 
-            # NEW: pop the feedback dialog immediately
+            st.session_state.wizard_feedback[key] = out
             _open_feedback_dialog(key)
             st.rerun()
 
-
     fb = (st.session_state.wizard_feedback.get(key) or "").strip()
     if fb:
-        st.text_area("Feedback", fb, height=240)
+        st.text_area("AI rewrite", fb, height=220)
 
-        # Simple helper: try to extract rewrite block
-        rewrite = _extract_rewrite(fb)
-        if rewrite:
-            st.markdown("##### Suggested rewrite")
-            st.text_area("Rewrite", rewrite, height=180, key=f"wizard_rewrite_{key}")
-
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Replace my draft with rewrite", use_container_width=True):
-                    st.session_state.wizard_answers[key] = rewrite
-                    # Also update current text_area value on rerun
-                    st.session_state[f"wizard_input_{key}"] = rewrite
-                    st.rerun()
-            with col2:
-                if st.button("Append rewrite below my draft", use_container_width=True):
-                    combined = (st.session_state.wizard_answers[key] or "").rstrip() + "\n\n" + rewrite
-                    st.session_state.wizard_answers[key] = combined
-                    st.session_state[f"wizard_input_{key}"] = combined
-                    st.rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Replace my draft with AI rewrite", use_container_width=True):
+                st.session_state[f"wizard_input_{key}"] = fb
+                st.session_state.wizard_answers[key] = fb
+                st.rerun()
+        with col2:
+            if st.button("Append AI rewrite below my draft", use_container_width=True):
+                combined = (st.session_state.wizard_answers[key] or "").rstrip() + "\n\n" + fb
+                st.session_state[f"wizard_input_{key}"] = combined
+                st.session_state.wizard_answers[key] = combined
+                st.rerun()
 
     st.markdown("---")
 
@@ -460,91 +497,59 @@ def wizard_page():
     nav_cols = st.columns([1, 1, 3])
     with nav_cols[0]:
         if st.button("Back", disabled=back_disabled, use_container_width=True):
+            _close_feedback_dialog_state()
             st.session_state.wizard_step = max(0, step - 1)
             st.rerun()
     with nav_cols[1]:
         if st.button("Next", disabled=next_disabled, use_container_width=True):
+            _close_feedback_dialog_state()
             st.session_state.wizard_step = min(total - 1, step + 1)
             st.rerun()
     with nav_cols[2]:
         if next_disabled:
             st.caption("This step is required before continuing.")
 
+
 def _open_feedback_dialog(section_key: str):
+    _close_feedback_dialog_state()
     st.session_state.wizard_feedback_section_key = section_key
     st.session_state.wizard_show_feedback_dialog = True
 
 
-@st.dialog("AI feedback")
+@st.dialog("AI rewrite")
 def _feedback_dialog():
     key = st.session_state.wizard_feedback_section_key
     fb = (st.session_state.wizard_feedback.get(key) or "").strip()
 
     if not fb:
-        st.info("No feedback to show.")
+        st.info("No AI rewrite to show.")
         if st.button("Close", use_container_width=True):
-            st.session_state.wizard_show_feedback_dialog = False
+            _close_feedback_dialog_state()
             st.rerun()
         return
 
-    st.text_area("Feedback", fb, height=260)
-
-    rewrite = _extract_rewrite(fb)
-    if rewrite:
-        st.markdown("#### Suggested rewrite")
-        st.text_area("Rewrite", rewrite, height=200, key=f"dialog_rewrite_{key}")
+    st.text_area("AI rewrite", fb, height=260)
 
     c1, c2 = st.columns(2)
-
     with c1:
-        # Accept: replace the user's draft with the rewrite if available,
-        # otherwise do nothing except close.
         if st.button("Accept", type="primary", use_container_width=True):
-            if rewrite:
-                st.session_state.wizard_answers[key] = rewrite
-                st.session_state[f"wizard_input_{key}"] = rewrite
-            st.session_state.wizard_show_feedback_dialog = False
+            st.session_state[f"wizard_input_{key}"] = fb
+            st.session_state.wizard_answers[key] = fb
+            _close_feedback_dialog_state()
             st.rerun()
 
     with c2:
-        # Decline: keep draft as-is, just close.
         if st.button("Decline", use_container_width=True):
-            st.session_state.wizard_show_feedback_dialog = False
+            _close_feedback_dialog_state()
             st.rerun()
 
-def _extract_rewrite(feedback_text: str) -> str:
-    """
-    Tries to parse the 'Rewrite:' portion out of the model output.
-    If not present, returns empty string.
-    """
-    txt = feedback_text or ""
-    lower = txt.lower()
 
-    idx = lower.find("rewrite:")
-    if idx < 0:
-        return ""
-    after = txt[idx + len("rewrite:") :].strip()
-
-    # If the model repeats headings, stop at next heading
-    stop_markers = ["missing:", "suggestions:"]
-    stop_positions = []
-    lower_after = after.lower()
-    for m in stop_markers:
-        j = lower_after.find(m)
-        if j >= 0:
-            stop_positions.append(j)
-    if stop_positions:
-        after = after[: min(stop_positions)].strip()
-
-    return after.strip()
-
-
-def _render_review_and_export():
-    st.subheader("Review & Export")
+def _render_review_and_prefill():
+    st.subheader("Review & Prefill")
 
     answers = st.session_state.wizard_answers
 
-    st.caption("Review your sections below. You can go Back to edit, or export when ready.")
+    st.caption("Review your sections below. You can go Back to edit, or prefill the Submit page when ready.")
     for s in SECTIONS:
         k = s["key"]
         st.markdown(f"### {s['label']}")
@@ -559,10 +564,11 @@ def _render_review_and_export():
     st.markdown("### Combined text (for Submit page prefill)")
     st.text_area("Combined", compiled, height=220)
 
-    c1, c2, c3 = st.columns([1, 1, 2])
+    c1, c2 = st.columns([1, 1])
 
     with c1:
         if st.button("Back", use_container_width=True):
+            _close_feedback_dialog_state()
             st.session_state.wizard_step = max(0, len(SECTIONS) - 1)
             st.rerun()
 
@@ -573,34 +579,6 @@ def _render_review_and_export():
             st.session_state.prefill["dataset_description"] = compiled
             st.success("Prefill set. Switch to Submit in the sidebar to see it populated.")
 
-    with c3:
-        try:
-            docx_bytes = build_docx_bytes(answers, title_fallback="Dataset Description")
-            safe_title = (answers.get("title") or "dataset_description").strip() or "dataset_description"
-            filename = _safe_filename(safe_title) + ".docx"
-
-            st.download_button(
-                "Download Word document (.docx)",
-                data=docx_bytes,
-                file_name=filename,
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
-            )
-        except Exception as e:
-            st.error(f"Word export unavailable: {e}")
-
-
-def _safe_filename(name: str) -> str:
-    # Keep it simple and Windows-friendly.
-    keep = []
-    for ch in (name or ""):
-        if ch.isalnum() or ch in (" ", "_", "-"):
-            keep.append(ch)
-    out = "".join(keep).strip().replace(" ", "_")
-    return out[:80] if out else "dataset_description"
 
 if __name__ == "__main__":
     wizard_page()
-
-#Once the AI is done, it's output will be put in an extra box that shows up.
-#From there, there is an accept or decline button that will either replace the text area with the AI output or leave it as is.
