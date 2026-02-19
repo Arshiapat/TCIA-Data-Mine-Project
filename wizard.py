@@ -241,13 +241,29 @@ Section requirements:
 
 STRICT RULES:
 - Output ONLY the rewritten text for this section.
-- Do NOT add explanations, commentary, or multiple options.
+- Do NOT add explanations, commentary, or multiple options, or annotations.
 - Do NOT add labels, headings, or formatting.
+- Do NOT invent any specifics that are not in the original text. If details are missing, improve clarity using general language without adding new facts.
 - Do NOT use Markdown or code blocks.
 - Do NOT invent or assume specifics (counts, dates, scanner models, institutions, outcomes).
 - If something is vague, improve clarity using general language, without adding new facts.
 - The rewrite must not be less informative than the input.
 - Keep content limited to this section only.
+- Do NOT reference other sections or add content from other sections.
+- Do NOT use colons in the Title section.
+- Always keep the Title to a single line.
+- For the Abstract, keep it to 2-5 sentences in a single paragraph, without bullets.
+- Always follow the specific guidance and hard constraints for each section.
+- If the input is very brief, the rewrite should expand it into a more complete description while adhering to the constraints above.
+- Always ensure the output is in a polished, professional tone suitable for a scientific dataset description.
+- Do NOT include any text that is not a direct rewrite of the user's input for this section.
+- Do NOT copy and paste the user's input; the output should be a rewritten version that improves clarity and informativeness while adhering to the constraints above.
+- Do NOT include any prefatory or concluding remarks, explanations, or commentary in the output. Only provide the rewritten section text.
+- Do NOT include any labels, headings, or formatting in the output. Only provide the rewritten section text.
+- Do NOT add any content that is not in the original text. If the original text is missing details, do not invent them; simply rewrite what is there to be clearer and more informative without adding new facts.
+- Do NOT use Markdown formatting, bullets, or code blocks in the output. Only provide plain text.
+- Always ensure the output is in a polished, professional tone suitable for a scientific dataset description.
+- The output should be a rewritten version of the user's input for this section that improves clarity and informativeness while adhering to all the constraints above.
 
 Text to rewrite:
 \"\"\"{section_text}\"\"\"
