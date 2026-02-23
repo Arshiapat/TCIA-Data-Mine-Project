@@ -1,0 +1,3012 @@
+{
+  "primary_diagnosis": [
+    {
+      "value": "Acantholytic Cuniculatum",
+      "ncit_code": null
+    },
+    {
+      "value": "Acantholytic squamous cell skin carcinoma",
+      "ncit_code": "C4460"
+    },
+    {
+      "value": "Acinar cell carcinoma",
+      "ncit_code": "C3768"
+    },
+    {
+      "value": "Acinar cell cystadenocarcinoma",
+      "ncit_code": "C5727"
+    },
+    {
+      "value": "Acquired cystic disease associated renal cell carcinoma",
+      "ncit_code": "C157718"
+    },
+    {
+      "value": "Acral lentiginous melanoma",
+      "ncit_code": "C4022"
+    },
+    {
+      "value": "Adenocarcinoma",
+      "ncit_code": "C2852"
+    },
+    {
+      "value": "Adenocarcinoma in situ, mucinous",
+      "ncit_code": "C136717"
+    },
+    {
+      "value": "Adenocarcinoma in situ, nonmucinous",
+      "ncit_code": "C136716"
+    },
+    {
+      "value": "Adenocarcinoma with peculiar aspects",
+      "ncit_code": "C77967:C61468:C2852"
+    },
+    {
+      "value": "Adenocarcinoma, biliary type",
+      "ncit_code": "C96936"
+    },
+    {
+      "value": "Adenocarcinoma, bladder",
+      "ncit_code": "C4032"
+    },
+    {
+      "value": "Adenocarcinoma, gastric foveolar type",
+      "ncit_code": "C95508"
+    },
+    {
+      "value": "Adenocarcinoma, intestinal type",
+      "ncit_code": "C4126"
+    },
+    {
+      "value": "Adenocarcinoma, Not Otherwise Specified",
+      "ncit_code": "C19594:C2852"
+    },
+    {
+      "value": "Adenocarcinoma, prostate ductal",
+      "ncit_code": "C6813"
+    },
+    {
+      "value": "Adenocarcinoma; clear cell",
+      "ncit_code": "C3766"
+    },
+    {
+      "value": "Adenocarcinoma; endometrioid; NOS",
+      "ncit_code": "C19594:C3769"
+    },
+    {
+      "value": "Adenocarcinoma; mixed",
+      "ncit_code": "C25259:C2852"
+    },
+    {
+      "value": "Adenocarcinoma; mixed; adenocarcinoma and squamous cell carcinoma",
+      "ncit_code": "C25259:C2929:C37912:C2852"
+    },
+    {
+      "value": "Adenocarcinoma; mucinous; NOS",
+      "ncit_code": "C19594:C26712"
+    },
+    {
+      "value": "Adenocarcinoma; papillary",
+      "ncit_code": "C2853"
+    },
+    {
+      "value": "Adenocarcinoma; serous",
+      "ncit_code": "C3778"
+    },
+    {
+      "value": "Adenocarcinoma; Solid Pattern Predominant",
+      "ncit_code": "C36182:C2852"
+    },
+    {
+      "value": "Adenocarcinomas (non-salivary gland type)",
+      "ncit_code": "C25594:C12426:C2852"
+    },
+    {
+      "value": "Adenoid Basal Carcinoma",
+      "ncit_code": "C40213"
+    },
+    {
+      "value": "Adenoid Cystic Carcinoma",
+      "ncit_code": "C2970"
+    },
+    {
+      "value": "Adenosarcoma",
+      "ncit_code": "C9474"
+    },
+    {
+      "value": "Adenosarcoma with cartilaginous differentiation",
+      "ncit_code": "C9474:C53445"
+    },
+    {
+      "value": "Adenosarcoma with osseous differentiation",
+      "ncit_code": "C9474:C53444"
+    },
+    {
+      "value": "Adenosarcoma with other heterologous element (specify)",
+      "ncit_code": "C9474:C54559"
+    },
+    {
+      "value": "Adenosarcoma with rhabdomyoblastic differentiation",
+      "ncit_code": "C9474:C35937"
+    },
+    {
+      "value": "Adenosarcoma with sarcomatous overgrowth",
+      "ncit_code": "C9474:C54727"
+    },
+    {
+      "value": "Adenosquamous",
+      "ncit_code": "C3727"
+    },
+    {
+      "value": "Adrenocortical Carcinoma- Myxoid Type",
+      "ncit_code": "C39744:C9325"
+    },
+    {
+      "value": "Adrenocortical Carcinoma- Oncocytic Type",
+      "ncit_code": "C36942:C9325"
+    },
+    {
+      "value": "Adrenocortical carcinoma- Usual Type",
+      "ncit_code": "C68635"
+    },
+    {
+      "value": "Adult T-cell Leukemia/Lymphoma",
+      "ncit_code": "C3184"
+    },
+    {
+      "value": "Anal Squamous Cell Carcinoma",
+      "ncit_code": "C9161"
+    },
+    {
+      "value": "Anaplastic Astrocytoma\u00a0",
+      "ncit_code": "C9477"
+    },
+    {
+      "value": "Anaplastic Ganglioglioma\u00a0",
+      "ncit_code": "C4717"
+    },
+    {
+      "value": "Anaplastic Large Cell Lymphoma",
+      "ncit_code": "C3720"
+    },
+    {
+      "value": "Anaplastic Oligodendroglioma\u00a0",
+      "ncit_code": "C4326"
+    },
+    {
+      "value": "Anaplastic Pleomorphic Xanthoastrocytoma\u00a0",
+      "ncit_code": "C129327"
+    },
+    {
+      "value": "Angioimmunoblastic T-cell Lymphoma",
+      "ncit_code": "C7528"
+    },
+    {
+      "value": "Astrocytoma",
+      "ncit_code": "C60781"
+    },
+    {
+      "value": "Atypical Teratoid/Rhabdoid Tumor\u00a0",
+      "ncit_code": "C6906"
+    },
+    {
+      "value": "B-cell lymphoma (unclassifiable) with features intermediate between DLBCL and Burkitt lymphoma",
+      "ncit_code": "C80291"
+    },
+    {
+      "value": "Basal cell adenocarcinoma",
+      "ncit_code": "C3678"
+    },
+    {
+      "value": "Basaloid Squamous Cell",
+      "ncit_code": "C54244"
+    },
+    {
+      "value": "Basaloid squamous cell carcinoma",
+      "ncit_code": "C54244"
+    },
+    {
+      "value": "Biphasic mesothelioma",
+      "ncit_code": "C4282"
+    },
+    {
+      "value": "Biphenotypic sinonasal sarcoma",
+      "ncit_code": "C164205"
+    },
+    {
+      "value": "Breast adenocarcinoma metastatic",
+      "ncit_code": "C165698"
+    },
+    {
+      "value": "Brenner tumor, borderline/atypical proliferative Brenner tumor",
+      "ncit_code": "C9459"
+    },
+    {
+      "value": "Brenner tumor; malignant",
+      "ncit_code": "C14143:C39954"
+    },
+    {
+      "value": "Bronchoalveolar",
+      "ncit_code": "C2923"
+    },
+    {
+      "value": "Burkitt lymphoma (BL), atypical morphology",
+      "ncit_code": "C6917"
+    },
+    {
+      "value": "Burkitt lymphoma (BL), classic morphology",
+      "ncit_code": "C21917"
+    },
+    {
+      "value": "Burkitt Lymphoma, NOS",
+      "ncit_code": "C19594:C2912"
+    },
+    {
+      "value": "Carcinoid tumor; atypical",
+      "ncit_code": "C72074"
+    },
+    {
+      "value": "Carcinoid tumor; NOS",
+      "ncit_code": "C19594:C2915"
+    },
+    {
+      "value": "Carcinoid tumor; typical",
+      "ncit_code": "C102843:C2915"
+    },
+    {
+      "value": "Carcinoma arising from a teratoma",
+      "ncit_code": "C39997"
+    },
+    {
+      "value": "Carcinoma cuniculatum",
+      "ncit_code": "C8174"
+    },
+    {
+      "value": "Carcinoma with lymphoid stroma (medullary carcinoma)",
+      "ncit_code": "C95748"
+    },
+    {
+      "value": "Carcinoma, small cell, NOS",
+      "ncit_code": "C19594:C3915"
+    },
+    {
+      "value": "Carcinoma, subtype cannot be determined",
+      "ncit_code": "C3812"
+    },
+    {
+      "value": "Carcinoma, type cannot be determined",
+      "ncit_code": "C124294:C25284:C2916"
+    },
+    {
+      "value": "Carcinoma; adenosquamous",
+      "ncit_code": "C3727"
+    },
+    {
+      "value": "Carcinoma; anaplastic; NOS",
+      "ncit_code": "C19594:C3692"
+    },
+    {
+      "value": "Carcinoma; basal cell; NOS",
+      "ncit_code": "C19594:CL066969"
+    },
+    {
+      "value": "Carcinoma; clear cell",
+      "ncit_code": "C12478:C2916"
+    },
+    {
+      "value": "Carcinoma; follicular; NOS",
+      "ncit_code": "C8054"
+    },
+    {
+      "value": "Carcinoma; granulosa cell",
+      "ncit_code": "C3070"
+    },
+    {
+      "value": "Carcinoma; intracystic; NOS",
+      "ncit_code": "C19594:C7645"
+    },
+    {
+      "value": "Carcinoma; large cell; neuroendocrine",
+      "ncit_code": "C6875"
+    },
+    {
+      "value": "Carcinoma; large cell; NOS",
+      "ncit_code": "C19594:C3780"
+    },
+    {
+      "value": "Carcinoma; medullary; NOS",
+      "ncit_code": "C66718"
+    },
+    {
+      "value": "Carcinoma; Merkel cell",
+      "ncit_code": "C9231"
+    },
+    {
+      "value": "Carcinoma; mixed; adenocarcinoma and squamous cell",
+      "ncit_code": "C4200"
+    },
+    {
+      "value": "Carcinoma; mucoepidermoid",
+      "ncit_code": "C3772"
+    },
+    {
+      "value": "Carcinoma; neuroendocrine; NOS",
+      "ncit_code": "C3773"
+    },
+    {
+      "value": "Carcinoma; NOS",
+      "ncit_code": "C19594:C2916"
+    },
+    {
+      "value": "Carcinoma; papillary; NOS",
+      "ncit_code": "C19594:C14166:C2916"
+    },
+    {
+      "value": "Carcinoma; papillary; serous primary; peritoneum",
+      "ncit_code": "C25313:C8377"
+    },
+    {
+      "value": "Carcinoma; papillary; serous surface",
+      "ncit_code": "C4182"
+    },
+    {
+      "value": "Carcinoma; renal cell; NOS",
+      "ncit_code": "C19594:C9385"
+    },
+    {
+      "value": "Carcinoma; serous; NOS",
+      "ncit_code": "C19594:C14168:C2916"
+    },
+    {
+      "value": "Carcinoma; small cell; gastric neuroendocrine",
+      "ncit_code": "C6764"
+    },
+    {
+      "value": "Carcinoma; small-cell neuroendocrine; prostate",
+      "ncit_code": "C6766"
+    },
+    {
+      "value": "Carcinoma; squamous cell; NOS",
+      "ncit_code": "C19594:C12849:C2916"
+    },
+    {
+      "value": "Carcinoma; urothelial; NOS",
+      "ncit_code": "C19594:C4030"
+    },
+    {
+      "value": "Carcinosarcoma",
+      "ncit_code": "C34448"
+    },
+    {
+      "value": "Carcinosarcoma (malignant mixed M\u00fcllerian tumor)",
+      "ncit_code": "C8975"
+    },
+    {
+      "value": "Central Nervous System Ganglioneuroblastoma\u00a0",
+      "ncit_code": "C92629"
+    },
+    {
+      "value": "Central Nervous System Neuroblastoma\u00a0",
+      "ncit_code": "C4826"
+    },
+    {
+      "value": "Cervical Squamous Cell Carcinoma",
+      "ncit_code": "C4028"
+    },
+    {
+      "value": "Cholangiocarcinoma",
+      "ncit_code": "C4436"
+    },
+    {
+      "value": "Cholangiocarcinoma; distal",
+      "ncit_code": "C7109"
+    },
+    {
+      "value": "Cholangiocarcinoma; hilar/perihilar",
+      "ncit_code": "C36077"
+    },
+    {
+      "value": "Cholangiocarcinoma; intrahepatic",
+      "ncit_code": "C35417"
+    },
+    {
+      "value": "Chondrosarcoma; myxoid",
+      "ncit_code": "C27378"
+    },
+    {
+      "value": "Choriocarcinoma, non-gestational",
+      "ncit_code": "C39991"
+    },
+    {
+      "value": "Chromophobe Renal Cell Carcinoma",
+      "ncit_code": "C4146"
+    },
+    {
+      "value": "Chronic lymphocytic leukemia (CLL)/Small lymphocytic lymphoma (SLL)",
+      "ncit_code": "C3163:C48928:C7540"
+    },
+    {
+      "value": "Classic MB",
+      "ncit_code": "C54039"
+    },
+    {
+      "value": "Classical/Usual (Papillary NOS)",
+      "ncit_code": "C19594:C4035"
+    },
+    {
+      "value": "Clear Cell Adenocarcinoma",
+      "ncit_code": "C3766"
+    },
+    {
+      "value": "Clear cell borderline tumor/atypical proliferative clear cell tumor",
+      "ncit_code": "C126308"
+    },
+    {
+      "value": "Clear cell papillary renal cell carcinoma",
+      "ncit_code": "C121955"
+    },
+    {
+      "value": "Clear Cell Renal Carcinoma",
+      "ncit_code": "C12478:C9384"
+    },
+    {
+      "value": "Clear cell renal cell carcinoma",
+      "ncit_code": "C4033"
+    },
+    {
+      "value": "Clear Cell Squamous Cell",
+      "ncit_code": "C65180"
+    },
+    {
+      "value": "Collecting duct carcinoma",
+      "ncit_code": "C6194"
+    },
+    {
+      "value": "Collecting Duct Renal Cell Carcinoma",
+      "ncit_code": "C32344:C9385"
+    },
+    {
+      "value": "Colloid adenocarcinoma",
+      "ncit_code": "C45512"
+    },
+    {
+      "value": "Colon Adenocarcinoma",
+      "ncit_code": "C4349"
+    },
+    {
+      "value": "Colon Mucinous Adenocarcinoma",
+      "ncit_code": "C7966"
+    },
+    {
+      "value": "Combined hepatocellular-cholangiocarcinoma",
+      "ncit_code": "C3828"
+    },
+    {
+      "value": "Conventional leiomyosarcoma",
+      "ncit_code": "C9428"
+    },
+    {
+      "value": "Cutaneous T-cell Lymphoma",
+      "ncit_code": "C3467"
+    },
+    {
+      "value": "De-differentiated carcinoma",
+      "ncit_code": "C126769"
+    },
+    {
+      "value": "Dedifferentiated liposarcoma",
+      "ncit_code": "C3704"
+    },
+    {
+      "value": "Desmoid Sarcoma",
+      "ncit_code": "C9182:C9118"
+    },
+    {
+      "value": "Desmoid Tumor",
+      "ncit_code": "C9182"
+    },
+    {
+      "value": "Desmoplastic melanoma",
+      "ncit_code": "C37257"
+    },
+    {
+      "value": "Desmoplastic mesothelioma",
+      "ncit_code": "C6747"
+    },
+    {
+      "value": "Desmoplastic/Nodular Medulloblastoma\u00a0",
+      "ncit_code": "C4956"
+    },
+    {
+      "value": "Diffuse large B-cell lymphoma (DLBCL) NOS (any anatomic site nodal or extranodal)",
+      "ncit_code": "C8851:C19594"
+    },
+    {
+      "value": "Diffuse malignant mesothelioma - Biphasic",
+      "ncit_code": "C4282:C8420"
+    },
+    {
+      "value": "Diffuse malignant mesothelioma - Desmoplastic",
+      "ncit_code": "C6747:C8420"
+    },
+    {
+      "value": "Diffuse malignant mesothelioma - Epithelioid",
+      "ncit_code": "C7985:C8420"
+    },
+    {
+      "value": "Diffuse malignant mesothelioma - NOS",
+      "ncit_code": "C19594:C8420"
+    },
+    {
+      "value": "Diffuse malignant mesothelioma -Sarcomatoid",
+      "ncit_code": "C45655:C8420"
+    },
+    {
+      "value": "DLBCL associated with chronic inflammation",
+      "ncit_code": "C14141:C3137:C25281:C62355:C8851"
+    },
+    {
+      "value": "Ductal breast carcinoma in situ",
+      "ncit_code": "C2924"
+    },
+    {
+      "value": "Dysgerminoma",
+      "ncit_code": "C8106"
+    },
+    {
+      "value": "EBV positive DLBCL of the elderly",
+      "ncit_code": "C16268:C14204:C38758:C8851"
+    },
+    {
+      "value": "Embryonal carcinoma",
+      "ncit_code": "C3752"
+    },
+    {
+      "value": "Endocervical Adenocarcinoma of the Usual Type",
+      "ncit_code": "C28327"
+    },
+    {
+      "value": "Endocervical Type of Adenocarcinoma",
+      "ncit_code": "C12309:C25284:C2852"
+    },
+    {
+      "value": "Endometrial rhabdomyosarcoma",
+      "ncit_code": "C127058"
+    },
+    {
+      "value": "Endometrial stromal sarcoma",
+      "ncit_code": "C8973"
+    },
+    {
+      "value": "Endometrial stromal sarcoma with glandular elements",
+      "ncit_code": "C8973:C43573"
+    },
+    {
+      "value": "Endometrial stromal sarcoma with sex cord elements",
+      "ncit_code": "C8973:C35932"
+    },
+    {
+      "value": "Endometrial stromal sarcoma with smooth muscle differentiation",
+      "ncit_code": "C8973:C13001:C18314"
+    },
+    {
+      "value": "Endometrioid Adenocarcinoma of Endocervix",
+      "ncit_code": "C12309:C3769"
+    },
+    {
+      "value": "Endometrioid borderline tumor/atypical proliferative endometrioid tumor",
+      "ncit_code": "C7983"
+    },
+    {
+      "value": "Endometrioid borderline tumor/atypical proliferative endometrioid tumor with microinvasion",
+      "ncit_code": "C159486"
+    },
+    {
+      "value": "Endometrioid carcinoma",
+      "ncit_code": "C7979"
+    },
+    {
+      "value": "Endometrioid carcinoma with secretory differentiation",
+      "ncit_code": "C27839"
+    },
+    {
+      "value": "Endometrioid carcinoma with squamous differentiation",
+      "ncit_code": "C8719"
+    },
+    {
+      "value": "Endometrioid carcinoma, NOS",
+      "ncit_code": "C7558"
+    },
+    {
+      "value": "Endometrioid carcinoma, other variant (specify)",
+      "ncit_code": "C7558:C17649:C25713"
+    },
+    {
+      "value": "Endometrioid carcinoma, villoglandular variant",
+      "ncit_code": "C27846"
+    },
+    {
+      "value": "Endometrioid endometrial adenocarcinoma",
+      "ncit_code": "C6287"
+    },
+    {
+      "value": "Endometrioid endometrial adenocarcinoma (Grade 1 or 2)",
+      "ncit_code": "C48309:C45255::1:C37998:C45255::2:C3769"
+    },
+    {
+      "value": "Endometrioid endometrial adenocarcinoma (Grade 1)",
+      "ncit_code": "C48309:C45255::1:C3769"
+    },
+    {
+      "value": "Endometrioid endometrial adenocarcinoma (Grade 2)",
+      "ncit_code": "C48309:C45255::2:C3769"
+    },
+    {
+      "value": "Endometrioid endometrial adenocarcinoma (Grade 3)",
+      "ncit_code": "C48309:C45255::3:C3769"
+    },
+    {
+      "value": "Enteric adenocarcinoma",
+      "ncit_code": "C136710"
+    },
+    {
+      "value": "Ependymoma; NOS",
+      "ncit_code": "C19594:C3017"
+    },
+    {
+      "value": "Epithelial-myoepithelial carcinoma",
+      "ncit_code": "C4199"
+    },
+    {
+      "value": "Epithelioid Cell",
+      "ncit_code": "C4236"
+    },
+    {
+      "value": "Epithelioid mesothelioma",
+      "ncit_code": "C7985"
+    },
+    {
+      "value": "Esophagus Adenocarcinoma, NOS",
+      "ncit_code": "C12389:C2852:C19594"
+    },
+    {
+      "value": "Esophagus Squamous Cell Carcinoma",
+      "ncit_code": "C12389:C2929"
+    },
+    {
+      "value": "ETMR",
+      "ncit_code": "C4915"
+    },
+    {
+      "value": "Ewing sarcoma",
+      "ncit_code": "C4817"
+    },
+    {
+      "value": "Fetal Adenocarcinoma",
+      "ncit_code": "C45509"
+    },
+    {
+      "value": "Fibrolamellar Carcinoma",
+      "ncit_code": "C4131"
+    },
+    {
+      "value": "Fibrolamellar hepatocellular carcinoma",
+      "ncit_code": "C4131"
+    },
+    {
+      "value": "Fibrosarcoma; NOS",
+      "ncit_code": "C19594:C3043"
+    },
+    {
+      "value": "Follicular lymphoma",
+      "ncit_code": "C3209"
+    },
+    {
+      "value": "Gastrointestinal stromal tumor; malignant",
+      "ncit_code": "C14143:C3868"
+    },
+    {
+      "value": "Germ cell tumor; mixed",
+      "ncit_code": "C4290"
+    },
+    {
+      "value": "Germ cell tumor; non-seminomatous",
+      "ncit_code": "C9313"
+    },
+    {
+      "value": "Giant cell 'MFH' / Undifferentiated pleomorphic sarcoma with giant cells",
+      "ncit_code": "C8380"
+    },
+    {
+      "value": "Giant Cell Glioblastoma\u00a0",
+      "ncit_code": "C4325"
+    },
+    {
+      "value": "Glassy Cell Carcinoma",
+      "ncit_code": "C65159"
+    },
+    {
+      "value": "Glioblastoma Multiforme (GBM)",
+      "ncit_code": "C3058"
+    },
+    {
+      "value": "Gliosarcoma\u00a0",
+      "ncit_code": "C3796"
+    },
+    {
+      "value": "Granulosa cell tumor, adult type",
+      "ncit_code": "C7288"
+    },
+    {
+      "value": "Granulosa cell tumor, juvenile type",
+      "ncit_code": "C7289"
+    },
+    {
+      "value": "Granulosa cell tumor; malignant",
+      "ncit_code": "C4205"
+    },
+    {
+      "value": "Granulosa cell tumor; Sarcomatoid",
+      "ncit_code": "C39694:C3070"
+    },
+    {
+      "value": "Hairy cell leukemia",
+      "ncit_code": "C7402"
+    },
+    {
+      "value": "Head & Neck Squamous Cell Carcinoma",
+      "ncit_code": "C34447"
+    },
+    {
+      "value": "Head & Neck Squamous Cell Carcinoma Basaloid Type",
+      "ncit_code": "C54244:C34447"
+    },
+    {
+      "value": "Head & Neck Squamous Cell Carcinoma, Spindle Cell Variant",
+      "ncit_code": "C34447:C27091"
+    },
+    {
+      "value": "Hepatocellular Carcinoma",
+      "ncit_code": "C3099"
+    },
+    {
+      "value": "Hepatocholangiocarcinoma (Mixed)",
+      "ncit_code": "C4436"
+    },
+    {
+      "value": "Hepatoid adenocarcinoma",
+      "ncit_code": "C66950"
+    },
+    {
+      "value": "Hereditary leiomyomatosis and renal cell carcinoma-associated renal cell carcinoma",
+      "ncit_code": "C51302"
+    },
+    {
+      "value": "High grade serous carcinoma",
+      "ncit_code": "C14158:C7550"
+    },
+    {
+      "value": "High-grade neuroendocrine carcinoma (small cell type)",
+      "ncit_code": "C95583"
+    },
+    {
+      "value": "Hodgkin lymphoma; nodular sclerosis; NOS",
+      "ncit_code": "C19594:C3518"
+    },
+    {
+      "value": "HPV-mediated squamous cell carcinoma",
+      "ncit_code": "C87055"
+    },
+    {
+      "value": "HPV-unrelated squamous cell carcinoma",
+      "ncit_code": "C147906"
+    },
+    {
+      "value": "Hybrid squamous cell carcinoma",
+      "ncit_code": "C128790:C12849:C2916"
+    },
+    {
+      "value": "Hypopharyngeal squamous cell carcinoma",
+      "ncit_code": "C4043"
+    },
+    {
+      "value": "Immature teratoma",
+      "ncit_code": "C8111"
+    },
+    {
+      "value": "Indeterminate MB",
+      "ncit_code": "C48658:C3222"
+    },
+    {
+      "value": "Infiltrating Carcinoma NOS",
+      "ncit_code": "C19594:C9245"
+    },
+    {
+      "value": "Infiltrating Ductal Carcinoma",
+      "ncit_code": "C4194"
+    },
+    {
+      "value": "Infiltrating Lobular Carcinoma",
+      "ncit_code": "C7950"
+    },
+    {
+      "value": "Inflammatory 'MFH' / Undifferentiated pleomorphic sarcoma with prominent inflammation",
+      "ncit_code": "C6497"
+    },
+    {
+      "value": "Inflammatory myofibroblastic tumor",
+      "ncit_code": "C6481"
+    },
+    {
+      "value": "Intermediate Atypical Carcinoma",
+      "ncit_code": "C136972"
+    },
+    {
+      "value": "Intestinal adenocarcinoma, colonic pattern",
+      "ncit_code": "C160986"
+    },
+    {
+      "value": "Intestinal adenocarcinoma, mixed pattern",
+      "ncit_code": "C161000"
+    },
+    {
+      "value": "Intestinal adenocarcinoma, mucinous pattern",
+      "ncit_code": "C160995"
+    },
+    {
+      "value": "Intestinal adenocarcinoma, papillary pattern",
+      "ncit_code": "C160984"
+    },
+    {
+      "value": "Intestinal adenocarcinoma, solid pattern",
+      "ncit_code": "C160987"
+    },
+    {
+      "value": "Intraductal carcinoma",
+      "ncit_code": "C62192"
+    },
+    {
+      "value": "Intraductal papillary mucinous neoplasm (IPMN, main duct/mixed)",
+      "ncit_code": "C38342"
+    },
+    {
+      "value": "Intraductal papillary mucinous neoplasm (IPMN, Side duct)",
+      "ncit_code": "C113665"
+    },
+    {
+      "value": "Intraductal papillary neoplasm with an associated invasive carcinoma",
+      "ncit_code": "C96810"
+    },
+    {
+      "value": "Invasive Adenocarcinoma",
+      "ncit_code": "C14159:C2852"
+    },
+    {
+      "value": "Invasive adenocarcinoma arising from IPMN",
+      "ncit_code": "C5726"
+    },
+    {
+      "value": "Invasive carcinoma arising in MCN",
+      "ncit_code": "C41246"
+    },
+    {
+      "value": "Invasive Carcinoma With Ductal And Lobular Features",
+      "ncit_code": "C4195:C9480"
+    },
+    {
+      "value": "Invasive Carcinoma: Type Cannot Be Determined",
+      "ncit_code": "C19594:C9480"
+    },
+    {
+      "value": "Invasive Cribiform Carcinoma",
+      "ncit_code": "C5142"
+    },
+    {
+      "value": "Invasive Ductal Carcinoma",
+      "ncit_code": "C4194"
+    },
+    {
+      "value": "Invasive Lobular Carcinoma",
+      "ncit_code": "C7950"
+    },
+    {
+      "value": "Invasive Micropapillary Carcinoma",
+      "ncit_code": "C14159:C5139"
+    },
+    {
+      "value": "Invasive moderately differentiated adenoma",
+      "ncit_code": "C14159:C14162:C2855"
+    },
+    {
+      "value": "Invasive Papillary Carcinoma",
+      "ncit_code": "C14159:C2927"
+    },
+    {
+      "value": "Invasive poorly differentiated adenoma",
+      "ncit_code": "C14159:C14167:C2855"
+    },
+    {
+      "value": "Isolated intraductal carcinoma",
+      "ncit_code": "C25549:C161022"
+    },
+    {
+      "value": "Kaposi Sarcoma HHV-Associated Multicentric Castleman Disease",
+      "ncit_code": "C150404"
+    },
+    {
+      "value": "Kaposi-sarcoma Associated Herpesvirus (KSHV) Inflammatory Cytokine Syndrome",
+      "ncit_code": "C125711"
+    },
+    {
+      "value": "Kidney Chromophobe",
+      "ncit_code": "C4146"
+    },
+    {
+      "value": "Kidney Clear Cell Renal Carcinoma",
+      "ncit_code": "C4033"
+    },
+    {
+      "value": "Kidney Papillary Renal Cell Carcinoma",
+      "ncit_code": "C6975"
+    },
+    {
+      "value": "Large cell neuroendocrine carcinoma, HPV negative",
+      "ncit_code": "C131488:C6875"
+    },
+    {
+      "value": "Large cell neuroendocrine carcinoma, HPV positive",
+      "ncit_code": "C128839:C6875"
+    },
+    {
+      "value": "Large Cell/Anaplastic MB",
+      "ncit_code": "C6904"
+    },
+    {
+      "value": "Large Cell/Anaplastic Medulloblastoma\u00a0",
+      "ncit_code": "C129436"
+    },
+    {
+      "value": "Leiomyosarcoma (LMS)",
+      "ncit_code": "C3158"
+    },
+    {
+      "value": "Leiomyosarcoma, epithelioid type",
+      "ncit_code": "C3700"
+    },
+    {
+      "value": "Leiomyosarcoma, myxoid type",
+      "ncit_code": "C3701"
+    },
+    {
+      "value": "Lentigo maligna melanoma",
+      "ncit_code": "C9151"
+    },
+    {
+      "value": "Lepidic predominant adenocarcinoma",
+      "ncit_code": "C123160"
+    },
+    {
+      "value": "Leydig cell tumor",
+      "ncit_code": "C3188"
+    },
+    {
+      "value": "Liver - Fibrolamellar hepatocellular carcinoma",
+      "ncit_code": "C4131:C12392"
+    },
+    {
+      "value": "Liver - Hepatocellular carcinoma",
+      "ncit_code": "C3099:C12392"
+    },
+    {
+      "value": "Liver - Hepatocholangiocarcinoma (mixed)",
+      "ncit_code": "C3828:C12392"
+    },
+    {
+      "value": "Low grade serous carcinoma",
+      "ncit_code": "C105556"
+    },
+    {
+      "value": "Lung Acinar Adenocarcinoma",
+      "ncit_code": "C12468:C13077:C2852"
+    },
+    {
+      "value": "Lung Adenocarcinoma Mixed Subtype",
+      "ncit_code": "C12468:C25259:C25696:C2852"
+    },
+    {
+      "value": "Lung Adenocarcinoma- Not Otherwise Specified (NOS)",
+      "ncit_code": "C12468:C19594:C2852"
+    },
+    {
+      "value": "Lung Adenosquamous Carcinoma",
+      "ncit_code": "C3727:C12468"
+    },
+    {
+      "value": "Lung Basaloid Squamous Cell Carcinoma",
+      "ncit_code": "C45507"
+    },
+    {
+      "value": "Lung Bronchioloalveolar Carcinoma Mucinous",
+      "ncit_code": "C12468:C14163:C2923"
+    },
+    {
+      "value": "Lung Bronchioloalveolar Carcinoma Nonmucinous",
+      "ncit_code": "C12468:C25594:C14163:C2923"
+    },
+    {
+      "value": "Lung Clear Cell Adenocarcinoma",
+      "ncit_code": "C12468:C12478:C2852"
+    },
+    {
+      "value": "Lung Clear Cell Squamous Cell Carcinoma",
+      "ncit_code": "C45503"
+    },
+    {
+      "value": "Lung Fetal Adenocarcinoma",
+      "ncit_code": "C12468:C13235:C2852"
+    },
+    {
+      "value": "Lung Micropapillary Adenocarcinoma",
+      "ncit_code": "C12468:C36181:C2852"
+    },
+    {
+      "value": "Lung Mucinous Adenocarcinoma",
+      "ncit_code": "C12468:C14163:C2852"
+    },
+    {
+      "value": "Lung Mucinous Cystadenocarcinoma",
+      "ncit_code": "C12468:C14163:C2971"
+    },
+    {
+      "value": "Lung Papillary Adenocarcinoma",
+      "ncit_code": "C12468:C14166:C2852"
+    },
+    {
+      "value": "Lung Papillary Squamous Cell Caricnoma",
+      "ncit_code": "C45502"
+    },
+    {
+      "value": "Lung Signet Ring Adenocarcinoma",
+      "ncit_code": "C12468:C12487:C2852"
+    },
+    {
+      "value": "Lung Small Cell Squamous Cell Carcinoma",
+      "ncit_code": "C45504"
+    },
+    {
+      "value": "Lung Solid Pattern Predominant Adenocarcinoma",
+      "ncit_code": "C12468:C45300:C25336:C25487:C2852"
+    },
+    {
+      "value": "Lung Squamous Cell Carcinoma- Not Otherwise Specified (NOS)",
+      "ncit_code": "C19594:C3493"
+    },
+    {
+      "value": "Lymphoepithelial carcinoma",
+      "ncit_code": "C4107"
+    },
+    {
+      "value": "Lymphoma; B-cell; NOS",
+      "ncit_code": "C19594:C27907:C3208"
+    },
+    {
+      "value": "Lymphoma; mantle cell",
+      "ncit_code": "C4337"
+    },
+    {
+      "value": "Lymphoma; marginal zone; splenic; NOS",
+      "ncit_code": "C19594:C4663"
+    },
+    {
+      "value": "Lymphoma; plasmablastic",
+      "ncit_code": "C7224"
+    },
+    {
+      "value": "Malignant Peripheral Nerve Sheath Tumors (MPNST)",
+      "ncit_code": "C3798"
+    },
+    {
+      "value": "Malignant perivascular epithelioid cell tumor",
+      "ncit_code": "C14143:C45634:C3262"
+    },
+    {
+      "value": "Marginal zone lymphoma, NOS",
+      "ncit_code": "C4341:C19594"
+    },
+    {
+      "value": "Medullary Carcinoma",
+      "ncit_code": "C3879"
+    },
+    {
+      "value": "Medullary Carcinoma, NOS",
+      "ncit_code": "C66718"
+    },
+    {
+      "value": "Medulloblastoma with Extensive Nodularity\u00a0",
+      "ncit_code": "C5407"
+    },
+    {
+      "value": "Medulloepithelioma\u00a0",
+      "ncit_code": "C4327"
+    },
+    {
+      "value": "Melanoma",
+      "ncit_code": "C3224"
+    },
+    {
+      "value": "Melanoma arising from blue nevus",
+      "ncit_code": "C4240"
+    },
+    {
+      "value": "Melanoma arising in a giant congenital nevus",
+      "ncit_code": "C4235"
+    },
+    {
+      "value": "Melanoma, NOS",
+      "ncit_code": "C19594:C3224"
+    },
+    {
+      "value": "Mesothelioma",
+      "ncit_code": "C3234"
+    },
+    {
+      "value": "Mesothelioma (NOS)",
+      "ncit_code": "C19594:C3234"
+    },
+    {
+      "value": "Metaplastic Carcinoma",
+      "ncit_code": "C27949"
+    },
+    {
+      "value": "Metaplastic Ductal Carcinoma",
+      "ncit_code": "C25566:C4017"
+    },
+    {
+      "value": "Metastatic cancer of appendix",
+      "ncit_code": "C162275"
+    },
+    {
+      "value": "Micropapillary carcinoma",
+      "ncit_code": "C36181:C2916"
+    },
+    {
+      "value": "Minimally invasive adenocarcinoma",
+      "ncit_code": "C60986:C2852"
+    },
+    {
+      "value": "Minimally invasive adenocarcinoma, mucinous",
+      "ncit_code": "C7268"
+    },
+    {
+      "value": "Minimally invasive adenocarcinoma, nonmucinous",
+      "ncit_code": "C7269"
+    },
+    {
+      "value": "Minor salivary gland carcinoma",
+      "ncit_code": "C5957"
+    },
+    {
+      "value": "MiT family translocation renal cell carcinoma",
+      "ncit_code": "C154494"
+    },
+    {
+      "value": "Mixed acinar-ductal carcinoma",
+      "ncit_code": "C95458"
+    },
+    {
+      "value": "Mixed acinar-neuroendocrine carcinoma",
+      "ncit_code": "C6878"
+    },
+    {
+      "value": "Mixed adenoneuroendocrine carcinoma",
+      "ncit_code": "C95406"
+    },
+    {
+      "value": "Mixed adenoneuroendocrine carcinoma",
+      "ncit_code": "C95886"
+    },
+    {
+      "value": "Mixed cell carcinoma (specify types and percentages)",
+      "ncit_code": "C40153"
+    },
+    {
+      "value": "Mixed Ductal and Lobular",
+      "ncit_code": "C25259:C25732:C37912:C25557"
+    },
+    {
+      "value": "Mixed ductal-neuroendocrine carcinoma",
+      "ncit_code": "C6879"
+    },
+    {
+      "value": "Mixed epithelial borderline (atypical proliferative) tumor",
+      "ncit_code": "C158616"
+    },
+    {
+      "value": "Mixed Histology (please specify)",
+      "ncit_code": "C25685:C25259:C25526:C3367"
+    },
+    {
+      "value": "Mixed malignant germ cell tumor",
+      "ncit_code": "C8114"
+    },
+    {
+      "value": "Mixed serous and endometrioid",
+      "ncit_code": "C25259:C27838:C37912:C3769"
+    },
+    {
+      "value": "Moderately differentiated adenocarcinoma",
+      "ncit_code": "C36797"
+    },
+    {
+      "value": "Moderately-differentiated neuroendocrine carcinoma",
+      "ncit_code": "C14162:C3773"
+    },
+    {
+      "value": "Mucin-depleted Adenocarcinoma",
+      "ncit_code": "C82974:C2852"
+    },
+    {
+      "value": "Mucinous (Colloid) Adenocarcinoma",
+      "ncit_code": "C26712"
+    },
+    {
+      "value": "Mucinous (Colloid) Carcinoma",
+      "ncit_code": "C26712"
+    },
+    {
+      "value": "Mucinous Adenocarcinoma of Endocervical Type",
+      "ncit_code": "C12309:C25284:C26712"
+    },
+    {
+      "value": "Mucinous borderline tumor/atypical proliferative mucinous tumor",
+      "ncit_code": "C122586"
+    },
+    {
+      "value": "Mucinous borderline tumor/atypical proliferative mucinous tumor with intraepithelial carcinoma",
+      "ncit_code": "C159312"
+    },
+    {
+      "value": "Mucinous borderline tumor/atypical proliferative mucinous tumor with microinvasion",
+      "ncit_code": "C159311"
+    },
+    {
+      "value": "Mucinous Carcinoma",
+      "ncit_code": "C26712"
+    },
+    {
+      "value": "Mucinous Cystadenocarcinoma",
+      "ncit_code": "C3776"
+    },
+    {
+      "value": "Mucinous cystic neoplasm with an associated invasive carcinoma",
+      "ncit_code": "C4130"
+    },
+    {
+      "value": "Mucinous cystic neoplasms (MCN)",
+      "ncit_code": "C41247"
+    },
+    {
+      "value": "Mucinous tubular and spindle renal cell carcinoma",
+      "ncit_code": "C39807"
+    },
+    {
+      "value": "Mucoepidermoid carcinoma",
+      "ncit_code": "C3772"
+    },
+    {
+      "value": "Mucosal melanoma",
+      "ncit_code": "C114828"
+    },
+    {
+      "value": "Multilocular cystic clear cell renal cell neoplasm of low malignant potential",
+      "ncit_code": "C4524"
+    },
+    {
+      "value": "Muscle invasive urothelial carcinoma (pT2 or above)",
+      "ncit_code": "C89352:C4030"
+    },
+    {
+      "value": "Myoepithelial carcinoma",
+      "ncit_code": "C7596"
+    },
+    {
+      "value": "Myxofibrosarcoma",
+      "ncit_code": "C6496"
+    },
+    {
+      "value": "Nasopharyngeal papillary adenocarcinoma",
+      "ncit_code": "C54400"
+    },
+    {
+      "value": "Natural Killer/T-cell Lymphoma",
+      "ncit_code": null
+    },
+    {
+      "value": "Nerve sheath tumor; malignant peripheral",
+      "ncit_code": "C3798"
+    },
+    {
+      "value": "Neuroendocrine Carcinoma (poorly differentiated)",
+      "ncit_code": "C14167:C3773"
+    },
+    {
+      "value": "Neuroendocrine carcinoma, large cell",
+      "ncit_code": "C3780:C3773"
+    },
+    {
+      "value": "Neuroendocrine carcinoma, small cell",
+      "ncit_code": "C3915:C3773"
+    },
+    {
+      "value": "Neuroendocrine Neoplasm",
+      "ncit_code": "C3809"
+    },
+    {
+      "value": "Neuroendocrine prostate carcinoma (NEPC)",
+      "ncit_code": "C158912"
+    },
+    {
+      "value": "Neurofibromatosis Type 1 (NF1)",
+      "ncit_code": "C3273"
+    },
+    {
+      "value": "Neurofibromatosis Type 2 (NF2)",
+      "ncit_code": "C3274"
+    },
+    {
+      "value": "Nevoid melanoma",
+      "ncit_code": "C54662"
+    },
+    {
+      "value": "Nodular melanoma",
+      "ncit_code": "C4225"
+    },
+    {
+      "value": "Non-intestinal adenocarcinoma",
+      "ncit_code": "C160977"
+    },
+    {
+      "value": "Non-Seminoma; Choriocarcinoma",
+      "ncit_code": "C7733"
+    },
+    {
+      "value": "Non-Seminoma; Embryonal Carcinoma",
+      "ncit_code": "C6341"
+    },
+    {
+      "value": "Non-Seminoma; Teratoma (Immature)",
+      "ncit_code": "C6353"
+    },
+    {
+      "value": "Non-Seminoma; Teratoma (Mature)",
+      "ncit_code": "C6355"
+    },
+    {
+      "value": "Non-Seminoma; Yolk Sac Tumor",
+      "ncit_code": "C8000"
+    },
+    {
+      "value": "Non-Small Cell Lung Cancer (NOS)",
+      "ncit_code": "C19594:C2926"
+    },
+    {
+      "value": "Non-squamous cell carcinoma",
+      "ncit_code": "C4450"
+    },
+    {
+      "value": "NOS",
+      "ncit_code": "C19594"
+    },
+    {
+      "value": "Not Applicable (no minor component)",
+      "ncit_code": "C48660"
+    },
+    {
+      "value": "Not applicable - liquid tumor",
+      "ncit_code": "C48660:C116915"
+    },
+    {
+      "value": "NUT carcinoma",
+      "ncit_code": "C45716"
+    },
+    {
+      "value": "Oligoastrocytoma",
+      "ncit_code": "C4050"
+    },
+    {
+      "value": "Oligodendroglioma",
+      "ncit_code": "C3288"
+    },
+    {
+      "value": "Oncocytic carcinoma",
+      "ncit_code": "C3679"
+    },
+    {
+      "value": "Oropharyngeal squamous cell carcinoma, HPV status unknown",
+      "ncit_code": "C9105:C14226:C25688:C17998:C2929"
+    },
+    {
+      "value": "Osteosarcoma; NOS",
+      "ncit_code": "C19594:C9145"
+    },
+    {
+      "value": "Other",
+      "ncit_code": "C17649"
+    },
+    {
+      "value": "Other Epithelial Tumor",
+      "ncit_code": "C17649:C2917"
+    },
+    {
+      "value": "Other Histology (Please Specify)",
+      "ncit_code": "C17649:C16681:C25685"
+    },
+    {
+      "value": "Other sex cord-stromal tumor",
+      "ncit_code": "C17649:C3794"
+    },
+    {
+      "value": "Other, specify",
+      "ncit_code": "C17649"
+    },
+    {
+      "value": "Ovarian Carcinoma",
+      "ncit_code": "C4908"
+    },
+    {
+      "value": "Pancreas-Adenocarcinoma Ductal Type",
+      "ncit_code": "C9120"
+    },
+    {
+      "value": "Pancreas-Adenocarcinoma-Other Subtype",
+      "ncit_code": "C17649:C25696:C8294"
+    },
+    {
+      "value": "Pancreas-Adenosquamous Carcinoma",
+      "ncit_code": "C12393:C3727"
+    },
+    {
+      "value": "Pancreas-Carcinoma with Osteoclast-like Giant Cells",
+      "ncit_code": "C5723"
+    },
+    {
+      "value": "Pancreas-Colloid (mucinous non-cystic) Carcinoma",
+      "ncit_code": "C37214"
+    },
+    {
+      "value": "Pancreas-Hepatoid Carcinoma",
+      "ncit_code": "C95465"
+    },
+    {
+      "value": "Pancreas-Medullary",
+      "ncit_code": "C95466"
+    },
+    {
+      "value": "Pancreas-Signet Ring Cell Carcinoma",
+      "ncit_code": "C5720"
+    },
+    {
+      "value": "Pancreas-Undifferentiated Carcinoma",
+      "ncit_code": "C5722"
+    },
+    {
+      "value": "Pancreatoblastoma",
+      "ncit_code": "C4265"
+    },
+    {
+      "value": "Papillary Renal Cell Carcinoma",
+      "ncit_code": "C6975"
+    },
+    {
+      "value": "Papillary renal cell carcinoma, Type 1",
+      "ncit_code": "C27886"
+    },
+    {
+      "value": "Papillary renal cell carcinoma, Type 2",
+      "ncit_code": "C27887"
+    },
+    {
+      "value": "Papillary Squamous Cell",
+      "ncit_code": "C4102"
+    },
+    {
+      "value": "Papillary Squamous Cell Carcinoma",
+      "ncit_code": "C4102"
+    },
+    {
+      "value": "Paraganglioma",
+      "ncit_code": "C3308"
+    },
+    {
+      "value": "Paraganglioma/Pheochromocytoma",
+      "ncit_code": "C3308:C37912:C3326"
+    },
+    {
+      "value": "Paraganglioma; Extra-adrenal Pheochromocytoma",
+      "ncit_code": "C3309"
+    },
+    {
+      "value": "Penile squamous cell carcinoma",
+      "ncit_code": "C7729"
+    },
+    {
+      "value": "Peripheral T-cell Lymphoma, NOS",
+      "ncit_code": "C4340"
+    },
+    {
+      "value": "Pheochromocytoma",
+      "ncit_code": "C3326"
+    },
+    {
+      "value": "Phyllodes Tumor",
+      "ncit_code": "C2977"
+    },
+    {
+      "value": "Pilocytic Astrocytoma\u00a0",
+      "ncit_code": "C4047"
+    },
+    {
+      "value": "Plasmacytoma; NOS",
+      "ncit_code": "C19594:C9349"
+    },
+    {
+      "value": "Pleomorphic 'MFH' / Undifferentiated pleomorphic sarcoma",
+      "ncit_code": "C6495"
+    },
+    {
+      "value": "Polymorphous adenocarcinoma, classic",
+      "ncit_code": "C35702"
+    },
+    {
+      "value": "Polymorphous adenocarcinoma, cribriform",
+      "ncit_code": "C160974"
+    },
+    {
+      "value": "Poorly differentiated adenoma",
+      "ncit_code": "C14167:C2855"
+    },
+    {
+      "value": "Poorly differentiated carcinoma, large cell neuroendocrine",
+      "ncit_code": "C160982"
+    },
+    {
+      "value": "Poorly differentiated carcinoma, small cell neuroendocrine",
+      "ncit_code": "C160981"
+    },
+    {
+      "value": "Poorly differentiated neuroendocrine carcinoma, large cell",
+      "ncit_code": "C6875:C14167"
+    },
+    {
+      "value": "Poorly differentiated neuroendocrine carcinoma, small cell",
+      "ncit_code": "C14167:C3915"
+    },
+    {
+      "value": "Poorly differentiated/ pleomorphic/ epithelioid leiomyosarcoma",
+      "ncit_code": "C9428:C3700"
+    },
+    {
+      "value": "Primary cutaneous DLBCL leg type",
+      "ncit_code": "C25251:C13316:C32974:C25284:C8851"
+    },
+    {
+      "value": "Primary DLBCL of the CNS",
+      "ncit_code": "C12438:C25251:C8851"
+    },
+    {
+      "value": "Primary mediastinal (thymic) DLBCL",
+      "ncit_code": "C25251:C25310:C8851"
+    },
+    {
+      "value": "Prostate Adenocarcinoma",
+      "ncit_code": "C2919"
+    },
+    {
+      "value": "Prostate Adenocarcinoma Acinar Type",
+      "ncit_code": "C5596"
+    },
+    {
+      "value": "Prostate Adenocarcinoma, Other Subtype",
+      "ncit_code": "C17649:C25696:C2919"
+    },
+    {
+      "value": "Rectal Adenocarcinoma",
+      "ncit_code": "C9383"
+    },
+    {
+      "value": "Rectal Mucinous Adenocarcinoma",
+      "ncit_code": "C7973"
+    },
+    {
+      "value": "Renal cell carcinoma, unclassified",
+      "ncit_code": "C27892"
+    },
+    {
+      "value": "Renal medullary carcinoma",
+      "ncit_code": "C7572"
+    },
+    {
+      "value": "Rhabdomyosarcoma",
+      "ncit_code": "C3359"
+    },
+    {
+      "value": "Salivary duct carcinoma",
+      "ncit_code": "C5904"
+    },
+    {
+      "value": "Salivary oncocytic carcinoma",
+      "ncit_code": "C62194"
+    },
+    {
+      "value": "Sarcoma; endometrial; stromal; NOS",
+      "ncit_code": "C19594:C8973"
+    },
+    {
+      "value": "Sarcoma; NOS",
+      "ncit_code": "C19594:C9118"
+    },
+    {
+      "value": "Sarcoma; pleomorphic cell",
+      "ncit_code": "C28109:C9118"
+    },
+    {
+      "value": "Sarcoma; stromal; NOS",
+      "ncit_code": "C19594:C6926"
+    },
+    {
+      "value": "Sarcoma; synovial; monophasic fibrous",
+      "ncit_code": "C6534"
+    },
+    {
+      "value": "Sarcoma; synovial; poorly differentiated",
+      "ncit_code": "C14167:C3400"
+    },
+    {
+      "value": "Sarcomatoid mesothelioma",
+      "ncit_code": "C45655"
+    },
+    {
+      "value": "Schwannomatosis",
+      "ncit_code": "C6557"
+    },
+    {
+      "value": "Sebaceous adenocarcinoma",
+      "ncit_code": "C160978"
+    },
+    {
+      "value": "Secretory carcinoma",
+      "ncit_code": "C123384"
+    },
+    {
+      "value": "Seminoma; NOS",
+      "ncit_code": "C19594:C9309"
+    },
+    {
+      "value": "Seromucinous borderline tumor/atypical proliferative seromucinous tumor",
+      "ncit_code": "C7281"
+    },
+    {
+      "value": "Seromucinous borderline tumor/atypical proliferative seromucinous tumor with microinvasion",
+      "ncit_code": "C159313"
+    },
+    {
+      "value": "Seromucinous carcinoma",
+      "ncit_code": "C40090"
+    },
+    {
+      "value": "Serous borderline tumor-micropapillary variant/noninvasive low-grade serous carcinoma",
+      "ncit_code": "C122585"
+    },
+    {
+      "value": "Serous borderline tumor/atypical proliferative serous tumor",
+      "ncit_code": "C122584"
+    },
+    {
+      "value": "Serous borderline tumor/atypical proliferative serous tumor with microinvasion",
+      "ncit_code": "C40027"
+    },
+    {
+      "value": "Serous Cystadenocarcinoma",
+      "ncit_code": "C3778"
+    },
+    {
+      "value": "Serous endometrial adenocarcinoma",
+      "ncit_code": "C27838"
+    },
+    {
+      "value": "Serous endometrial intraepithelial carcinoma",
+      "ncit_code": "C40152"
+    },
+    {
+      "value": "Serous tubal intraepithelial carcinoma (STIC)",
+      "ncit_code": "C126449"
+    },
+    {
+      "value": "Serrated Adenocarcinoma",
+      "ncit_code": "C42599:C2852"
+    },
+    {
+      "value": "Sertoli cell tumor",
+      "ncit_code": "C39976"
+    },
+    {
+      "value": "Sertoli-Leydig cell tumor",
+      "ncit_code": "C2880"
+    },
+    {
+      "value": "Signet Ring Adenocarcinoma",
+      "ncit_code": "C12487:C2852"
+    },
+    {
+      "value": "Signet ring Cell Carcinoma",
+      "ncit_code": "C3774"
+    },
+    {
+      "value": "Sinonasal undifferentiated carcinoma",
+      "ncit_code": "C54294"
+    },
+    {
+      "value": "Small cell carcinoma, hypercalcemic type",
+      "ncit_code": "C40439"
+    },
+    {
+      "value": "Small Cell Carcinoma, NOS",
+      "ncit_code": "C19594:C3915"
+    },
+    {
+      "value": "Small cell carcinoma, pulmonary type",
+      "ncit_code": "C40440"
+    },
+    {
+      "value": "Small cell neuroendocrine carcinoma",
+      "ncit_code": "C43587"
+    },
+    {
+      "value": "Small cell neuroendocrine carcinoma, HPV negative",
+      "ncit_code": "C131488:C3915"
+    },
+    {
+      "value": "Small cell neuroendocrine carcinoma, HPV positive",
+      "ncit_code": "C128839:C3915"
+    },
+    {
+      "value": "Small Cell Squamous Cell",
+      "ncit_code": "C45504"
+    },
+    {
+      "value": "Solid adenocarcinoma",
+      "ncit_code": "C45300:C2852"
+    },
+    {
+      "value": "Solid pseudopapillary neoplasm",
+      "ncit_code": "C37212"
+    },
+    {
+      "value": "Spindle Cell",
+      "ncit_code": "C4237"
+    },
+    {
+      "value": "Spindle cell carcinoma; NOS",
+      "ncit_code": "C19594:C27004"
+    },
+    {
+      "value": "Spindle cell squamous cell carcinoma",
+      "ncit_code": "C4666"
+    },
+    {
+      "value": "Squamous cell carcinoma",
+      "ncit_code": "C40093"
+    },
+    {
+      "value": "Squamous cell carcinoma, conventional",
+      "ncit_code": "C61300:C2929"
+    },
+    {
+      "value": "Squamous cell carcinoma, nonkeratinizing",
+      "ncit_code": "C54287"
+    },
+    {
+      "value": "Squamous Cell Carcinoma, Not Otherwise Specified",
+      "ncit_code": "C2929"
+    },
+    {
+      "value": "Squamous cell carcinoma, primary",
+      "ncit_code": "C8509:C2929"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Keratinizing",
+      "ncit_code": "C4105"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Lymphoepithelioma-like",
+      "ncit_code": "C40193"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Non-Keratinizing",
+      "ncit_code": "C36792"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Squamotransitional",
+      "ncit_code": "C40194"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Verrucous",
+      "ncit_code": "C3781"
+    },
+    {
+      "value": "Squamous Cell Carcinoma; Warty",
+      "ncit_code": "C40191"
+    },
+    {
+      "value": "Stomach Adenocarcinoma, Signet Ring Type",
+      "ncit_code": "C3774:C4004"
+    },
+    {
+      "value": "Stomach, Adenocarcinoma, Diffuse Type",
+      "ncit_code": "C9159"
+    },
+    {
+      "value": "Stomach, Adenocarcinoma, Not Otherwise Specified (NOS)",
+      "ncit_code": "C4004"
+    },
+    {
+      "value": "Stomach, Intestinal Adenocarcinoma, Mucinous Type",
+      "ncit_code": "C5248"
+    },
+    {
+      "value": "Stomach, Intestinal Adenocarcinoma, Not Otherwise Specified (NOS)",
+      "ncit_code": "C9157"
+    },
+    {
+      "value": "Stomach, Intestinal Adenocarcinoma, Papillary Type",
+      "ncit_code": "C5472"
+    },
+    {
+      "value": "Stomach, Intestinal Adenocarcinoma, Tubular Type",
+      "ncit_code": "C5473"
+    },
+    {
+      "value": "Succinate dehydrogenase (SDH) deficient renal cell carcinoma",
+      "ncit_code": "C156464"
+    },
+    {
+      "value": "Superficial spreading melanoma",
+      "ncit_code": "C9152"
+    },
+    {
+      "value": "Synovial Sarcoma",
+      "ncit_code": "C14167:C3400"
+    },
+    {
+      "value": "Synovial Sarcoma - Biphasic",
+      "ncit_code": "C4279"
+    },
+    {
+      "value": "Synovial Sarcoma - Monophasic",
+      "ncit_code": "C6534"
+    },
+    {
+      "value": "t(6;11) renal cell carcinoma",
+      "ncit_code": "C37210"
+    },
+    {
+      "value": "Thymoma; Type A",
+      "ncit_code": "C6454"
+    },
+    {
+      "value": "Thymoma; Type AB",
+      "ncit_code": "C6885"
+    },
+    {
+      "value": "Thymoma; Type B1",
+      "ncit_code": "C6887"
+    },
+    {
+      "value": "Thymoma; Type B2",
+      "ncit_code": "C6888"
+    },
+    {
+      "value": "Thymoma; Type B3",
+      "ncit_code": "C7997"
+    },
+    {
+      "value": "Thymoma; Type C",
+      "ncit_code": "C7569"
+    },
+    {
+      "value": "Thyroid Papillary Carcinoma - Classical/usual",
+      "ncit_code": "C61300:C4035"
+    },
+    {
+      "value": "Thyroid Papillary Carcinoma - Follicular (>= 99% follicular patterned)",
+      "ncit_code": "C7381"
+    },
+    {
+      "value": "Thyroid Papillary Carcinoma - Other, specify",
+      "ncit_code": "C17649:C4035"
+    },
+    {
+      "value": "Thyroid Papillary Carcinoma - Tall Cell (>= 50% tall cell features)",
+      "ncit_code": "C35558"
+    },
+    {
+      "value": "Transitional cell carcinoma",
+      "ncit_code": "C5240"
+    },
+    {
+      "value": "Treated primary GBM",
+      "ncit_code": "C70742:C25251:C3058"
+    },
+    {
+      "value": "Tubular Carcinoma",
+      "ncit_code": "C9135"
+    },
+    {
+      "value": "Tubulocystic renal cell carcinoma",
+      "ncit_code": "C126303"
+    },
+    {
+      "value": "Tubulolobular Carcinoma",
+      "ncit_code": "C97053"
+    },
+    {
+      "value": "Unclassifiable B-cell lymphoma",
+      "ncit_code": "C64486:C3457"
+    },
+    {
+      "value": "Unclassified (Renal Cell Carcinoma NOS)",
+      "ncit_code": "C27892"
+    },
+    {
+      "value": "Undifferentiated carcinoma",
+      "ncit_code": "C4509"
+    },
+    {
+      "value": "Undifferentiated Carcinoma",
+      "ncit_code": "C3692"
+    },
+    {
+      "value": "Undifferentiated Pleomorphic Sarcoma (UPS)",
+      "ncit_code": "C6495"
+    },
+    {
+      "value": "Undifferentiated uterine/endometrial sarcoma",
+      "ncit_code": "C8972"
+    },
+    {
+      "value": "Unknown",
+      "ncit_code": "C17998"
+    },
+    {
+      "value": "Untreated primary (de novo) GBM",
+      "ncit_code": "C25594:C70742:C25251:C3058"
+    },
+    {
+      "value": "Uterine Carcinosarcoma/ Malignant Mixed Mullerian Tumor (MMMT): NOS",
+      "ncit_code": "C19594:C42700"
+    },
+    {
+      "value": "Uterine Carcinosarcoma/ MMMT: Heterologous Type",
+      "ncit_code": "C8975:C54559:C42700"
+    },
+    {
+      "value": "Uterine Carcinosarcoma/MMMT: Homologous Type",
+      "ncit_code": "C113238:C8975"
+    },
+    {
+      "value": "Uterine serous endometrial adenocarcinoma",
+      "ncit_code": "C27838"
+    },
+    {
+      "value": "Uveal Melanoma",
+      "ncit_code": "C7712"
+    },
+    {
+      "value": "Uveal Melanoma; Epithelioid Cell",
+      "ncit_code": "C7712:C4236"
+    },
+    {
+      "value": "Uveal Melanoma; Spindle Cell",
+      "ncit_code": "C7712:C4237"
+    },
+    {
+      "value": "Vaginal Squamous Cell Carcinoma",
+      "ncit_code": "C180915"
+    },
+    {
+      "value": "Vulvar Squamous Cell Carcinoma",
+      "ncit_code": "C4052"
+    },
+    {
+      "value": "Well-differentiated leiomyosarcoma (resembling leiomyoma)",
+      "ncit_code": "C9389"
+    },
+    {
+      "value": "Well-differentiated neuroendocrine carcinoma",
+      "ncit_code": "C14171:C3773"
+    },
+    {
+      "value": "Xp11 translocation renal cell carcinoma",
+      "ncit_code": "C27891"
+    },
+    {
+      "value": "Yolk sac tumor (endodermal sinus tumor)",
+      "ncit_code": "C8107"
+    }
+  ],
+  "primary_site": [
+    {
+      "value": "abdomen",
+      "uberon_id": "UBERON:0000916",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "adrenal gland",
+      "uberon_id": "UBERON:0002369",
+      "ncit_code": "NCIT:C12666"
+    },
+    {
+      "value": "anterior mediastinum",
+      "uberon_id": "UBERON:0008820",
+      "ncit_code": "NCIT:C32098"
+    },
+    {
+      "value": "lateral wall of nasopharynx",
+      "uberon_id": "UBERON:0035383",
+      "ncit_code": "NCIT:C12244"
+    },
+    {
+      "value": "posterior part of tongue",
+      "uberon_id": "UBERON:0010033",
+      "ncit_code": "NCIT:C12228"
+    },
+    {
+      "value": "bladder organ",
+      "uberon_id": "UBERON:0018707",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "blood",
+      "uberon_id": "UBERON:0000178",
+      "ncit_code": "NCIT:C12434"
+    },
+    {
+      "value": "bone marrow",
+      "uberon_id": "UBERON:0002371",
+      "ncit_code": "NCIT:C12431"
+    },
+    {
+      "value": "bone element",
+      "uberon_id": "UBERON:0001474",
+      "ncit_code": "NCIT:C12366"
+    },
+    {
+      "value": "cranium",
+      "uberon_id": "UBERON:0003128",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "bone element|\narticular cartilage of joint",
+      "uberon_id": "UBERON:0001474|\nUBERON:0010996",
+      "ncit_code": "NCIT:C12366|\nNCIT:C32144"
+    },
+    {
+      "value": "brain",
+      "uberon_id": "UBERON:0000955",
+      "ncit_code": "NCIT:C12439"
+    },
+    {
+      "value": "brainstem",
+      "uberon_id": "UBERON:0002298",
+      "ncit_code": "NCIT:C12441"
+    },
+    {
+      "value": "breast",
+      "uberon_id": "UBERON:0000310",
+      "ncit_code": "NCIT:C12971"
+    },
+    {
+      "value": "bronchus|\nlung",
+      "uberon_id": "UBERON:0002185|\nUBERON:0002048",
+      "ncit_code": "NCIT:C12683|\nNCIT:C12468"
+    },
+    {
+      "value": "cauda equina",
+      "uberon_id": "UBERON:0012337",
+      "ncit_code": "NCIT:C12689"
+    },
+    {
+      "value": "cerebellum",
+      "uberon_id": "UBERON:0002037",
+      "ncit_code": "NCIT:C12445"
+    },
+    {
+      "value": "telencephalon",
+      "uberon_id": "UBERON:0001893",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "uterine cervix",
+      "uberon_id": "UBERON:0000002",
+      "ncit_code": "NCIT:C12311"
+    },
+    {
+      "value": "optic choroid",
+      "uberon_id": "UBERON:0001776",
+      "ncit_code": "NCIT:C12344"
+    },
+    {
+      "value": "colon",
+      "uberon_id": "UBERON:0001155",
+      "ncit_code": "NCIT:C12382"
+    },
+    {
+      "value": "hypodermis|\nconnective tissue",
+      "uberon_id": "UBERON:0002072|\nUBERON:0002384",
+      "ncit_code": "NCIT:C33645|\nNCIT:C12374"
+    },
+    {
+      "value": "abdomen connective tissue",
+      "uberon_id": "UBERON:0003567",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "neck connective tissue",
+      "uberon_id": "UBERON:0003568",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "hip connective tissue",
+      "uberon_id": "UBERON:0003576",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "pelvis connective tissue",
+      "uberon_id": "UBERON:0003594",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "No Match Found (IRI API)",
+      "uberon_id": "No Match Found (IRI API)",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "trunk connective tissue",
+      "uberon_id": "UBERON:0003586",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "shoulder connective tissue",
+      "uberon_id": "UBERON:0003579",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "hypodermis\nconnective tissue",
+      "uberon_id": "UBERON:0002072|\nUBERON:0002384",
+      "ncit_code": "NCIT:C33645|\nNCIT:C12374"
+    },
+    {
+      "value": "body of uterus",
+      "uberon_id": "UBERON:0009853",
+      "ncit_code": "NCIT:C12316"
+    },
+    {
+      "value": "testis",
+      "uberon_id": "UBERON:0000473",
+      "ncit_code": "NCIT:C12412"
+    },
+    {
+      "value": "external ear",
+      "uberon_id": "UBERON:0001691",
+      "ncit_code": "NCIT:C12292"
+    },
+    {
+      "value": "eye",
+      "uberon_id": "UBERON:0000970",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "eyelid",
+      "uberon_id": "UBERON:0001711",
+      "ncit_code": "NCIT:C12713"
+    },
+    {
+      "value": "fallopian tube",
+      "uberon_id": "UBERON:0003889",
+      "ncit_code": "NCIT:C12403"
+    },
+    {
+      "value": "frontal lobe",
+      "uberon_id": "UBERON:0016525",
+      "ncit_code": "NCIT:C12352"
+    },
+    {
+      "value": "gallbladder",
+      "uberon_id": "UBERON:0002110",
+      "ncit_code": "NCIT:C12377"
+    },
+    {
+      "value": "hard palate",
+      "uberon_id": "UBERON:0003216",
+      "ncit_code": "NCIT:C12230"
+    },
+    {
+      "value": "craniocervical region",
+      "uberon_id": "UBERON:0007811",
+      "ncit_code": "NCIT:C12418"
+    },
+    {
+      "value": "heart|\nmediastinum|\npleura",
+      "uberon_id": "UBERON:0000948|\nUBERON:0003728|\nUBERON:0000977",
+      "ncit_code": "NCIT:C12727|\nNCIT:C12748|\nNCIT:C12469"
+    },
+    {
+      "value": "hematopoietic system|\nreticuloendothelial system",
+      "uberon_id": "UBERON:0002390|\nUBERON:0000363",
+      "ncit_code": "NCIT:C12909|\nNCIT:C12780"
+    },
+    {
+      "value": "jejunum",
+      "uberon_id": "UBERON:0002115",
+      "ncit_code": "NCIT:C12388"
+    },
+    {
+      "value": "kidney",
+      "uberon_id": "UBERON:0002113",
+      "ncit_code": "NCIT:C12415"
+    },
+    {
+      "value": "larynx",
+      "uberon_id": "UBERON:0001737",
+      "ncit_code": "NCIT:C12420"
+    },
+    {
+      "value": "liver",
+      "uberon_id": "UBERON:0002107",
+      "ncit_code": "NCIT:C12392"
+    },
+    {
+      "value": "liver|\nintrahepatic bile duct",
+      "uberon_id": "UBERON:0002107|\nUBERON:0003704",
+      "ncit_code": "NCIT:C12392|\nNCIT:C12677"
+    },
+    {
+      "value": "limb long bone|\nlower limb segment",
+      "uberon_id": "UBERON:0003606|\nUBERON:0008784",
+      "ncit_code": "No Match Found (IRI API)|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "limb long bone|\nupper limb segment",
+      "uberon_id": "UBERON:0003606|\nUBERON:0008785",
+      "ncit_code": "No Match Found (IRI API)|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "lower limb segment",
+      "uberon_id": "UBERON:0008784",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "lung",
+      "uberon_id": "UBERON:0002048",
+      "ncit_code": "NCIT:C12468"
+    },
+    {
+      "value": "lung|\nbronchus",
+      "uberon_id": "UBERON:0002048|\nUBERON:0002185",
+      "ncit_code": "NCIT:C12468|\nNCIT:C12683"
+    },
+    {
+      "value": "lymph node",
+      "uberon_id": "UBERON:0000029",
+      "ncit_code": "NCIT:C33027"
+    },
+    {
+      "value": "craniocervical lymph node",
+      "uberon_id": "UBERON:0038849",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "inguinal lymph node",
+      "uberon_id": "UBERON:0001542",
+      "ncit_code": "NCIT:C32801"
+    },
+    {
+      "value": "mandible",
+      "uberon_id": "UBERON:0001684",
+      "ncit_code": "NCIT:C12290"
+    },
+    {
+      "value": "mediastinum",
+      "uberon_id": "UBERON:0003728",
+      "ncit_code": "NCIT:C12748"
+    },
+    {
+      "value": "middle ear",
+      "uberon_id": "UBERON:0001756",
+      "ncit_code": "NCIT:C12274"
+    },
+    {
+      "value": "mouth",
+      "uberon_id": "UBERON:0000165",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "nasal cavity",
+      "uberon_id": "UBERON:0001707",
+      "ncit_code": "NCIT:C12424"
+    },
+    {
+      "value": "nasal cavity|\nmiddle ear",
+      "uberon_id": "UBERON:0001707|\nUBERON:0001756",
+      "ncit_code": "NCIT:C12424|\nNCIT:C12274"
+    },
+    {
+      "value": "nasopharynx",
+      "uberon_id": "UBERON:0001728",
+      "ncit_code": "NCIT:C12423"
+    },
+    {
+      "value": "occipital lobe",
+      "uberon_id": "UBERON:0002021",
+      "ncit_code": "NCIT:C12355"
+    },
+    {
+      "value": "neuron projection bundle connecting eye with brain",
+      "uberon_id": "UBERON:0004904",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "orbital cavity",
+      "uberon_id": "UBERON:0004867",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "oropharynx",
+      "uberon_id": "UBERON:0001729",
+      "ncit_code": "NCIT:C12762"
+    },
+    {
+      "value": "digestive system",
+      "uberon_id": "UBERON:0001007",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "lip|\noral cavity|\npharynx",
+      "uberon_id": "UBERON:0001833|\nUBERON:0000167|\nUBERON:0006562",
+      "ncit_code": "NCIT:C12220|\nNCIT:C12421|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "tongue",
+      "uberon_id": "UBERON:0001723",
+      "ncit_code": "NCIT:C12422"
+    },
+    {
+      "value": "ovary",
+      "uberon_id": "UBERON:0000992",
+      "ncit_code": "NCIT:C12404"
+    },
+    {
+      "value": "central nervous system",
+      "uberon_id": "UBERON:0001017",
+      "ncit_code": "NCIT:C12438"
+    },
+    {
+      "value": "respiratory system",
+      "uberon_id": "UBERON:0001004",
+      "ncit_code": "NCIT:C12779"
+    },
+    {
+      "value": "pancreas",
+      "uberon_id": "UBERON:0001264",
+      "ncit_code": "NCIT:C12393"
+    },
+    {
+      "value": "pancreatic duct",
+      "uberon_id": "UBERON:0007329",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "parietal lobe",
+      "uberon_id": "UBERON:0001872",
+      "ncit_code": "NCIT:C12354"
+    },
+    {
+      "value": "parotid gland",
+      "uberon_id": "UBERON:0001831",
+      "ncit_code": "NCIT:C12427"
+    },
+    {
+      "value": "innominate bone|\nsacral region of vertebral column|\ncoccyx",
+      "uberon_id": "UBERON:0001272|\nUBERON:0006075|\nUBERON:0001350",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C33508|\nNCIT:C12696"
+    },
+    {
+      "value": "pelvic region of trunk",
+      "uberon_id": "UBERON:0002355",
+      "ncit_code": "NCIT:C12767"
+    },
+    {
+      "value": "autonomic nervous system|\nperipheral nervous system",
+      "uberon_id": "UBERON:0002410|\nUBERON:0000010",
+      "ncit_code": "NCIT:C12673|\nNCIT:C12465"
+    },
+    {
+      "value": "autonomic nervous system|\nperipheral nervous system|\nupper limb segment",
+      "uberon_id": "UBERON:0002410|\nUBERON:0000010|\nUBERON:0008785",
+      "ncit_code": "NCIT:C12673|\nNCIT:C12465|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "peritoneum",
+      "uberon_id": "UBERON:0002358",
+      "ncit_code": "NCIT:C12770"
+    },
+    {
+      "value": "pharynx",
+      "uberon_id": "UBERON:0006562",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "pineal body",
+      "uberon_id": "UBERON:0001905",
+      "ncit_code": "NCIT:C12398"
+    },
+    {
+      "value": "pituitary gland",
+      "uberon_id": "UBERON:0000007",
+      "ncit_code": "NCIT:C12399"
+    },
+    {
+      "value": "pleura",
+      "uberon_id": "UBERON:0000977",
+      "ncit_code": "NCIT:C12469"
+    },
+    {
+      "value": "posterior mediastinum",
+      "uberon_id": "UBERON:0008822",
+      "ncit_code": "NCIT:C33368"
+    },
+    {
+      "value": "prostate gland",
+      "uberon_id": "UBERON:0002367",
+      "ncit_code": "NCIT:C12410"
+    },
+    {
+      "value": "rectum",
+      "uberon_id": "UBERON:0001052",
+      "ncit_code": "NCIT:C12390"
+    },
+    {
+      "value": "renal pelvis",
+      "uberon_id": "UBERON:0001224",
+      "ncit_code": "NCIT:C12887"
+    },
+    {
+      "value": "retina",
+      "uberon_id": "UBERON:0000966",
+      "ncit_code": "NCIT:C12343"
+    },
+    {
+      "value": "retroperitoneal space",
+      "uberon_id": "UBERON:0003693",
+      "ncit_code": "NCIT:C12298"
+    },
+    {
+      "value": "retroperitoneal space|\nperitoneum",
+      "uberon_id": "UBERON:0003693|\nUBERON:0002358",
+      "ncit_code": "NCIT:C12298|\nNCIT:C12770"
+    },
+    {
+      "value": "rib|\nsternum|\nclavicle bone",
+      "uberon_id": "UBERON:0002228|\nUBERON:0000975|\nUBERON:0001105",
+      "ncit_code": "NCIT:C12782|\nNCIT:C12793|\nNCIT:C12695"
+    },
+    {
+      "value": "scrotum",
+      "uberon_id": "UBERON:0001300",
+      "ncit_code": "NCIT:C12785"
+    },
+    {
+      "value": "skin of body",
+      "uberon_id": "UBERON:0002097",
+      "ncit_code": "NCIT:C12470"
+    },
+    {
+      "value": "hindlimb skin",
+      "uberon_id": "UBERON:0003532",
+      "ncit_code": "NCIT:C12297"
+    },
+    {
+      "value": "skin of scalp|\nskin of neck",
+      "uberon_id": "UBERON:8300000|\nUBERON:0001417",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C52756"
+    },
+    {
+      "value": "small intestine",
+      "uberon_id": "UBERON:0002108",
+      "ncit_code": "NCIT:C12386"
+    },
+    {
+      "value": "soft palate",
+      "uberon_id": "UBERON:0001733",
+      "ncit_code": "NCIT:C12231"
+    },
+    {
+      "value": "spinal cord",
+      "uberon_id": "UBERON:0002240",
+      "ncit_code": "NCIT:C12464"
+    },
+    {
+      "value": "spinal cord|\ncranial nerve|\ncentral nervous system",
+      "uberon_id": "UBERON:0002240|\nUBERON:0001785|\nUBERON:0001017",
+      "ncit_code": "NCIT:C12464|\nNCIT:C12700|\nNCIT:C12438"
+    },
+    {
+      "value": "meninx of spinal cord",
+      "uberon_id": "UBERON:0003292",
+      "ncit_code": "NCIT:C12350"
+    },
+    {
+      "value": "supraglottic part of larynx",
+      "uberon_id": "UBERON:0036263",
+      "ncit_code": "NCIT:C12279"
+    },
+    {
+      "value": "temporal lobe",
+      "uberon_id": "UBERON:0001871",
+      "ncit_code": "NCIT:C12353"
+    },
+    {
+      "value": "chest",
+      "uberon_id": "UBERON:0001443",
+      "ncit_code": "NCIT:C12799"
+    },
+    {
+      "value": "thyroid gland",
+      "uberon_id": "UBERON:0002046",
+      "ncit_code": "NCIT:C12400"
+    },
+    {
+      "value": "trachea",
+      "uberon_id": "UBERON:0003126",
+      "ncit_code": "NCIT:C12428"
+    },
+    {
+      "value": "upper limb segment",
+      "uberon_id": "UBERON:0008785",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "vagina",
+      "uberon_id": "UBERON:0000996",
+      "ncit_code": "NCIT:C12407"
+    },
+    {
+      "value": "cardiac ventricle",
+      "uberon_id": "UBERON:0002082",
+      "ncit_code": "NCIT:C12730"
+    },
+    {
+      "value": "vertebral column",
+      "uberon_id": "UBERON:0001130",
+      "ncit_code": "NCIT:C33588"
+    },
+    {
+      "value": "anus\nanal canal",
+      "uberon_id": "UBERON:0001245\nUBERON:0000159",
+      "ncit_code": "NCIT:C43362|\nNCIT:C12375"
+    },
+    {
+      "value": "esophagus",
+      "uberon_id": "UBERON:0001043",
+      "ncit_code": "NCIT:C12389"
+    },
+    {
+      "value": "eye|\nocular adnexa",
+      "uberon_id": "UBERON:0000970|\nUBERON:0035639",
+      "ncit_code": "NCIT:C32574|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "mouth floor",
+      "uberon_id": "UBERON:0003679",
+      "ncit_code": "NCIT:C54187"
+    },
+    {
+      "value": "gingiva",
+      "uberon_id": "UBERON:0001828",
+      "ncit_code": "NCIT:C32677"
+    },
+    {
+      "value": "hypopharynx",
+      "uberon_id": "UBERON:0001051",
+      "ncit_code": "NCIT:C12246"
+    },
+    {
+      "value": "lip",
+      "uberon_id": "UBERON:0001833",
+      "ncit_code": "NCIT:C12220"
+    },
+    {
+      "value": "meningeal cluster",
+      "uberon_id": "UBERON:0010743",
+      "ncit_code": "NCIT:C12349"
+    },
+    {
+      "value": "helper property (not for use in curation)",
+      "uberon_id": "RO:0002464",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "internal female genitalia|\nexternal female genitalia",
+      "uberon_id": "UBERON:0003975|\nUBERON:0005056",
+      "ncit_code": "No Match Found (IRI API)|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "sublingual gland",
+      "uberon_id": "UBERON:0001832",
+      "ncit_code": "C12234"
+    },
+    {
+      "value": "external male genitalia|\ninternal male genitalia",
+      "uberon_id": "UBERON:0004053|\nUBERON:0004054",
+      "ncit_code": "No Match Found (IRI API)|\nNo Match Found (IRI API)"
+    },
+    {
+      "value": "biliary tree",
+      "uberon_id": "UBERON:0001173",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "renal system",
+      "uberon_id": "UBERON:0001008",
+      "ncit_code": "NCIT:C12413"
+    },
+    {
+      "value": "endocrine system",
+      "uberon_id": "UBERON:0000949",
+      "ncit_code": "NCIT:C12705"
+    },
+    {
+      "value": "primitive palate",
+      "uberon_id": "UBERON:0012316",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "penis",
+      "uberon_id": "UBERON:0000989",
+      "ncit_code": "NCIT:C12409"
+    },
+    {
+      "value": "autonomic nervous system|\nperipheral nervous system",
+      "uberon_id": "UBERON:0002410|\nUBERON:0000010",
+      "ncit_code": "NCIT:C12673|\nNCIT:C12465"
+    },
+    {
+      "value": "rectosigmoid junction",
+      "uberon_id": "UBERON:0036214",
+      "ncit_code": "NCIT:C54188"
+    },
+    {
+      "value": "stomach",
+      "uberon_id": "UBERON:0000945",
+      "ncit_code": "NCIT:C12391"
+    },
+    {
+      "value": "thymus",
+      "uberon_id": "UBERON:0002370",
+      "ncit_code": "NCIT:C12433"
+    },
+    {
+      "value": "tonsil",
+      "uberon_id": "UBERON:0002372",
+      "ncit_code": "NCIT:C12802"
+    },
+    {
+      "value": "ureter",
+      "uberon_id": "UBERON:0000056",
+      "ncit_code": "NCIT:C12416"
+    },
+    {
+      "value": "uterus",
+      "uberon_id": "UBERON:0000995",
+      "ncit_code": "NCIT:C12405"
+    },
+    {
+      "value": "mammalian vulva",
+      "uberon_id": "UBERON:0000997",
+      "ncit_code": "NCIT:C12408"
+    },
+    {
+      "value": "bladder organ|\nprostate gland",
+      "uberon_id": "UBERON:0018707|\nUBERON:0002367",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C12410"
+    },
+    {
+      "value": "bladder organ|\nurethra",
+      "uberon_id": "UBERON:0018707|\nUBERON:0000057",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C12417"
+    },
+    {
+      "value": "bladder organ|\nurethra|\nprostate gland",
+      "uberon_id": "UBERON:0018707|\nUBERON:0000057|\nUBERON:0002367",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C12417|\nNCIT:C12410"
+    },
+    {
+      "value": "bladder organ|\nurethra|\nvagina",
+      "uberon_id": "UBERON:0018707|\nUBERON:0000057|\nUBERON:0000996",
+      "ncit_code": "No Match Found (IRI API)|\nNCIT:C12417|\nNCIT:C12407"
+    },
+    {
+      "value": "appendicular skeleton",
+      "uberon_id": "UBERON:0002091",
+      "ncit_code": "NCIT:C49477"
+    },
+    {
+      "value": "carpus endochondral element",
+      "uberon_id": "UBERON:0015049",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "chest wall",
+      "uberon_id": "UBERON:0016435",
+      "ncit_code": "NCIT:C62484"
+    },
+    {
+      "value": "urethral meatus",
+      "uberon_id": "UBERON:0012240",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "mammary gland",
+      "uberon_id": "UBERON:0001911",
+      "ncit_code": "NCIT:C12367"
+    },
+    {
+      "value": "pleural cavity",
+      "uberon_id": "UBERON:0002402",
+      "ncit_code": "NCIT:C12840"
+    },
+    {
+      "value": "shoulder",
+      "uberon_id": "UBERON:0001467",
+      "ncit_code": "NCIT:C25203"
+    },
+    {
+      "value": "spleen",
+      "uberon_id": "UBERON:0002106",
+      "ncit_code": "NCIT:C12432"
+    },
+    {
+      "value": "hypodermis",
+      "uberon_id": "UBERON:0002072",
+      "ncit_code": "NCIT:C33645"
+    },
+    {
+      "value": "urethra|\nprostate gland",
+      "uberon_id": "UBERON:0000057|\nUBERON:0002367",
+      "ncit_code": "NCIT:C12417|\nNCIT:C12410"
+    },
+    {
+      "value": "genitourinary system",
+      "uberon_id": "UBERON:0004122",
+      "ncit_code": "NCIT:C12810"
+    },
+    {
+      "value": "anus",
+      "uberon_id": "UBERON:0001245",
+      "ncit_code": "NCIT:C43362"
+    },
+    {
+      "value": "arm",
+      "uberon_id": "UBERON:0001460",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "bile duct",
+      "uberon_id": "UBERON:0002394",
+      "ncit_code": "NCIT:C12376"
+    },
+    {
+      "value": "blood|\nbone tissue",
+      "uberon_id": "UBERON:0000178|\nUBERON:0002481",
+      "ncit_code": "NCIT:C12434|\nNCIT:C13076"
+    },
+    {
+      "value": "buttock",
+      "uberon_id": "UBERON:0013691",
+      "ncit_code": "NCIT:C89806"
+    },
+    {
+      "value": "calf",
+      "uberon_id": "UBERON:8480048",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "chest",
+      "uberon_id": "UBERON:0001443",
+      "ncit_code": "NCIT:C25389"
+    },
+    {
+      "value": "ear",
+      "uberon_id": "UBERON:0001690",
+      "ncit_code": "NCIT:C12394"
+    },
+    {
+      "value": "elbow",
+      "uberon_id": "UBERON:0001461",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "endocrine gland",
+      "uberon_id": "UBERON:0002368",
+      "ncit_code": "NCIT:C12704"
+    },
+    {
+      "value": "limb",
+      "uberon_id": "UBERON:0002101",
+      "ncit_code": "NCIT:C12429"
+    },
+    {
+      "value": "alimentary part of gastrointestinal system",
+      "uberon_id": "UBERON:0005409",
+      "ncit_code": "NCIT:C12378"
+    },
+    {
+      "value": "head",
+      "uberon_id": "UBERON:0000033",
+      "ncit_code": "NCIT:C12419"
+    },
+    {
+      "value": "head|\nchest",
+      "uberon_id": "UBERON:0000033|\nUBERON:0001443",
+      "ncit_code": "NCIT:C12419|\nNCIT:C25389"
+    },
+    {
+      "value": "knee",
+      "uberon_id": "UBERON:0001465",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "leg",
+      "uberon_id": "UBERON:0000978",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "bone marrow|\nblood",
+      "uberon_id": "UBERON:0002371\nUBERON:0000178",
+      "ncit_code": "NCIT:C12431\nNCIT:C12434"
+    },
+    {
+      "value": "mesothelium",
+      "uberon_id": "UBERON:0001136",
+      "ncit_code": "NCIT:C33105"
+    },
+    {
+      "value": "myometrium",
+      "uberon_id": "UBERON:0001296",
+      "ncit_code": "NCIT:C12314"
+    },
+    {
+      "value": "scapula",
+      "uberon_id": "UBERON:0006849",
+      "ncit_code": "NCIT:C12783"
+    },
+    {
+      "value": "external soft tissue zone",
+      "uberon_id": "UBERON:0034929",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "musculature of hindlimb stylopod",
+      "uberon_id": "UBERON:0004463",
+      "ncit_code": "No Match Found (IRI API)"
+    },
+    {
+      "value": "thoracic region of vertebral column",
+      "uberon_id": "UBERON:0006073",
+      "ncit_code": "NCIT:C69315"
+    },
+    {
+      "value": "body proper",
+      "uberon_id": "UBERON:0013702",
+      "ncit_code": "No Match Found (IRI API)"
+    }
+  ],
+  "race": [
+    "American Indian or Alaska Native",
+    "Asian",
+    "Black or African American",
+    "Native Hawaiian or Other Pacific Islander",
+    "Not Allowed To Collect",
+    "Not Reported",
+    "Unknown",
+    "White"
+  ],
+  "ethnicity": [
+    "Hispanic or Latino",
+    "Not Allowed To Collect",
+    "Not Hispanic or Latino",
+    "Not Reported",
+    "Unknown"
+  ],
+  "sex_at_birth": [
+    "Don't know",
+    "Female",
+    "Intersex",
+    "Male",
+    "None of these describe me",
+    "Prefer not to answer",
+    "Unknown"
+  ],
+  "relationship_type": [
+    "IsCitedBy",
+    "Cites",
+    "IsSupplementTo",
+    "IsSupplementedBy",
+    "IsContinuedBy",
+    "Continues",
+    "Describes",
+    "IsDescribedBy",
+    "HasMetadata",
+    "IsMetadataFor",
+    "HasVersion",
+    "IsVersionOf",
+    "IsNewVersionOf",
+    "IsPreviousVersionOf",
+    "IsPartOf",
+    "HasPart",
+    "IsPublishedIn",
+    "IsReferencedBy",
+    "References",
+    "IsDocumentedBy",
+    "Documents",
+    "IsCompiledBy",
+    "Compiles",
+    "IsVariantFormOf",
+    "IsOriginalFormOf",
+    "IsIdenticalTo",
+    "IsReviewedBy",
+    "Reviews",
+    "IsDerivedFrom",
+    "IsSourceOf",
+    "IsRequiredBy",
+    "Requires",
+    "Obsoletes",
+    "IsObsoletedBy",
+    "IsCollectedBy",
+    "Collects",
+    "IsTranslationOf",
+    "HasTranslation"
+  ],
+  "publication_type": [
+    "resourceTypeGeneral",
+    "Audiovisual",
+    "Book",
+    "BookChapter",
+    "Collection",
+    "ComputationalNotebook",
+    "ConferencePaper",
+    "ConferenceProceeding",
+    "DataPaper",
+    "Dataset",
+    "Dissertation",
+    "Event",
+    "Image",
+    "InteractiveResource",
+    "Journal",
+    "JournalArticle",
+    "Model",
+    "OutputManagementPlan",
+    "PeerReview",
+    "PhysicalObject",
+    "Preprint",
+    "Report",
+    "Service",
+    "Software",
+    "Sound",
+    "Standard",
+    "Text",
+    "Workflow",
+    "Other",
+    "Award",
+    "Project"
+  ]
+}

@@ -1,0 +1,686 @@
+{
+  "Program": [
+    {
+      "Property": "program_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "program_name",
+      "Description": "The name of the program under which related studies will be grouped, in full text and unabbreviated form, exactly as it will be displayed within the UI.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "program_short_name",
+      "Description": "An acronym or abbreviated form of the title of a broad framework of goals under which related projects or other research activities are grouped. Example - CPTAC",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "institution_name",
+      "Description": "TBD",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "program_short_description",
+      "Description": "An abbreviated, single sentence description of the program.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "program_full_description",
+      "Description": "A more detailed, multiple sentence description of the program.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "program_external_url",
+      "Description": "The external url to which users should be directed in order to learn more about the program.",
+      "Required/optional": "O"
+    }
+  ],
+  "Dataset": [
+    {
+      "Property": "dataset_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "program.program_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "dataset_long_name",
+      "Description": "descriptive title for the collection/ dataset",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "dataset_short_name",
+      "Description": "abbreviated title for the collection/ dataset",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "dataset_description",
+      "Description": "Description of the collection / dataset / study",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "dataset_abstract",
+      "Description": "Short description that will identify the dataset on public pages",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "adult_or_childhood_study",
+      "Description": "Study participants are adult, pediatric, or other",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "funding_agency",
+      "Description": "Funding agency of the requestor study",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "funding_source_program_name",
+      "Description": "The funding source organization/sponsor",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "grant_id",
+      "Description": "Grant or contract identifier",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "acknowledgements",
+      "Description": "additional acknowledgments",
+      "Required/optional": "O"
+    }
+  ],
+  "Subject": [
+    {
+      "Property": "subject_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "dataset.dataset_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "ethnicity",
+      "Description": "An individual's self-described social and cultural grouping, specifically whether an individual describes themselves as Hispanic or Latino. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "race",
+      "Description": "An arbitrary classification of a taxonomic group that is a division of a species. It usually arises as a consequence of geographical isolation within a species and is characterized by shared heredity, physical attributes and behavior, and in the case of humans, by common history, nationality, or geographic distribution. The provided values are based on the categories defined by the U.S. Office of Management and Business and used by the U.S. Census Bureau.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "sex_at_birth",
+      "Description": "A textual description of a person's sex at birth.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "vital_status",
+      "Description": "The survival state of the person registered on the protocol.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "NCBI Taxonomy ID",
+      "Description": "A label provided by NCBI Taxonomy Database (https://www.ncbi.nlm.nih.gov/taxonomy/), which uniquely identifies group or category, at any level, in a system for classifying plants or animals (including humans) providing ranked categories for the classification of organisms according to their suspected evolutionary relationships.",
+      "Required/optional": "R"
+    }
+  ],
+  "Procedure": [
+    {
+      "Property": "procedure_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "subject.subject_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "procedure_date",
+      "Description": null,
+      "Required/optional": "R"
+    },
+    {
+      "Property": "image_modality",
+      "Description": null,
+      "Required/optional": "R"
+    },
+    {
+      "Property": "lab_test_name",
+      "Description": "Descriptive name of the lab test or examination used to obtain the measurement or finding. Any test normally performed by a clinical laboratory is considered a lab test.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "test_result",
+      "Description": "The text term used to describe the result of the molecular test. If the test result was a numeric value see test_value.",
+      "Required/optional": "O"
+    }
+  ],
+  "File": [
+    {
+      "Property": "file_id",
+      "Description": "A file identifier generated by CRDC Submission Portal. This property is not included in the downloaded submission template",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "data_has_been_de-identified",
+      "Description": "An indicator that specifies whether the data has been de-identified.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "de_identification_method_type",
+      "Description": "General description of the de-identification method",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "de_identification_method_description",
+      "Description": "Description of the process of removing potentially identifying data or data elements to render data into a form that does not identify individuals and where identification is not likely to take place.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "de_identification_software",
+      "Description": "Software that was used to de-identify the images (if used)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "subject.subject_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "dataset.dataset_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "procedure.procedure_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "file_name",
+      "Description": "Name of file",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "file_type",
+      "Description": "File type from enumerated list",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "file_description",
+      "Description": "Human-readable description of file",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "file_size",
+      "Description": "File size in bytes",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "md5sum",
+      "Description": "MD5 hex digest for this file",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "license",
+      "Description": "license under which this collection / dataset / study will be published; Official or legal permission to do or own a specified thing.",
+      "Required/optional": null
+    },
+    {
+      "Property": "radiology.radiology_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "histopathology.histopathology_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "multiplex_image.multiplex_image_id",
+      "Description": null,
+      "Required/optional": null
+    }
+  ],
+  "Diagnosis": [
+    {
+      "Property": "subject.subject.id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "diagnosis_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "primary_diagnosis",
+      "Description": "Text term used to describe the patient's histologic diagnosis, as described by the World Health Organization's (WHO) International Classification of Diseases for Oncology (ICD-O).",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "age_at_diagnosis",
+      "Description": "Age at the time of diagnosis expressed in number of days since birth.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "primary_site",
+      "Description": "The text term used to describe the primary site of disease, as categorized by the World Health Organization's (WHO) International Classification of Diseases for Oncology (ICD-O). This categorization groups cases into general categories. Reference tissue_or_organ_of_origin on the diagnosis node for more specific primary sites of disease.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "metastasis_anatomic_site",
+      "Description": null,
+      "Required/optional": "O"
+    }
+  ],
+  "Investigator": [
+    {
+      "Property": "investigator_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "dataset.dataset_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "first_name",
+      "Description": "A word or group of words indicating a person's first (personal or given) name; the name that precedes the surname. Synonym = Given Name.> The first or given name of the person responsible for the conduct of the clinical trial or research project.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "last_name",
+      "Description": "A means of identifying an individual by using a word or group of words indicating a person's last (family) name. Synonym = Last Name, Surname.> The last or family name of the person responsible for the conduct of the clinical trial or research project",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "middle_name",
+      "Description": "A means of identifying an individual by using a word or group of words indicating a person's middle name.> The middle name of the person responsible for the conduct of the clinical trial or research project.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "person_orcid",
+      "Description": "A persistent unique digital identifier assigned to a person by the Open Researcher and Contributor ID (ORCID) organization.> A persistent unique digital identifier assigned to a principal investigator by the Open Researcher and Contributor ID (ORCID) organization.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "email",
+      "Description": "The string of characters that represents the electronic mail address of a person.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "role",
+      "Description": "The text that describes the distinguishable characteristics of the action or activity assigned to.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "organization_name",
+      "Description": "The text that describes the distinguishable characteristics of a person in a formal association with a group or organization.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "ror_id",
+      "Description": "The Research Organization Registry (ROR) is a global, community-led registry of open persistent identifiers for research organizations. (https://ror.org/)",
+      "Required/optional": "O"
+    }
+  ],
+  "Related_Work": [
+    {
+      "Property": "related_work_id",
+      "Description": "primary key",
+      "Required/optional": null
+    },
+    {
+      "Property": "dataset.dataset_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "DOI",
+      "Description": "Where applicable, the digital object identifier for the cited work, by which it can be permanently identified, and linked to via the internet.<br>This property is used as the key via which to identify the correct records during data updates.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "DOI_version",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "relationship_type",
+      "Description": "A set of DOI relationship types based on the DataCite Metadata Schema.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "publication_type",
+      "Description": "In the DataCite Metadata Schema 4.6 (released December 2024), the following publication-related resource types are listed.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "title",
+      "Description": "The full title of the publication stated exactly as it appears on the published work.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "authorship",
+      "Description": "A list of authors for the cited work. More specifically, for publications with no more than three authors, authorship quoted in full; for publications with more than three authors, authorship abbreviated to first author et al.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "year_of_publication",
+      "Description": "The year in which the cited work was published.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "journal_citation",
+      "Description": "The name of the journal in which the cited work was published, inclusive of the citation itself in terms of journal volume number, part number where applicable, and page numbers.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "resource_identifier",
+      "Description": "Repositories where other publications/datasets are stored, e.g. GDC, PDC",
+      "Required/optional": "O"
+    }
+  ],
+  "Radiology": [
+    {
+      "Property": "Radiology_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "is_phantom",
+      "Description": null,
+      "Required/optional": "R"
+    },
+    {
+      "Property": "Modality",
+      "Description": "Imaging modality",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "BodyPartExamined",
+      "Description": null,
+      "Required/optional": "R"
+    },
+    {
+      "Property": "StudyDesc",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "Patient_age_at_imaging",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "SeriesDescription",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "Manufacturer",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "ManufacturerModelName",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "PixelSpacing(mm)-Row",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "SliceThickness(mm)",
+      "Description": null,
+      "Required/optional": "O"
+    },
+    {
+      "Property": "SoftwareVersions",
+      "Description": null,
+      "Required/optional": "O"
+    }
+  ],
+  "Histopathology": [
+    {
+      "Property": "histopathology_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "acquisition_method_type",
+      "Description": "Records the method of acquisition or source for the specimen under consideration",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "tumor_tissue_type",
+      "Description": "Text that describes the kind of disease present in the tumor specimen as related to a specific timepoint (add rows to select multiple values along with timepoints)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "tissue_fixative",
+      "Description": "A compound that preserves tissues and cells for microscopic study.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "embedding_medium",
+      "Description": "The term which describes the method used to maintain the specimen in a viable state.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "staining_method",
+      "Description": "Any of the various methods that use a dye, reagent, or other material for producing coloration in tissues or microorganisms for microscopic examination.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "objective",
+      "Description": "An_objective_is an optical element that gathers light from an object being observed and_focuses_the_light rays_from it to produce a_real image_of the object.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "nominal_magnification",
+      "Description": "The magnification of the lens as specified by the manufacturer - i.e. '60' is a 60X lens. floating point value > 1(no units)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "immersion",
+      "Description": "Immersion medium",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "lens_numerical_aperture",
+      "Description": "The numerical aperture of the lens. Floating point value > 0.",
+      "Required/optional": "O"
+    }
+  ],
+  "Multiplex_Imaging": [
+    {
+      "Property": "multiplex_image_id",
+      "Description": null,
+      "Required/optional": null
+    },
+    {
+      "Property": "acquisition_method_type",
+      "Description": "Records the method of acquisition or source for the specimen under consideration",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "tumor_tissue_type",
+      "Description": "Text that describes the kind of disease present in the tumor specimen as related to a specific timepoint (add rows to select multiple values along with timepoints)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "tissue_fixative",
+      "Description": "A compound that preserves tissues and cells for microscopic study.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "embedding_medium",
+      "Description": "The term which describes the method used to maintain the specimen in a viable state.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "staining_method",
+      "Description": "Any of the various methods that use a dye, reagent, or other material for producing coloration in tissues or microorganisms for microscopic examination.",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "objective",
+      "Description": "An_objective_is an optical element that gathers light from an object being observed and_focuses_the_light rays_from it to produce a_real image_of the object.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "nominal_magnification",
+      "Description": "The magnification of the lens as specified by the manufacturer - i.e. '60' is a 60X lens. floating point value > 1(no units)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "immersion",
+      "Description": "Immersion medium",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "lens_numerical_aperture",
+      "Description": "The numerical aperture of the lens. Floating point value > 0.",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "working_distance",
+      "Description": "The working distance of the lens, expressed as a floating point number. Floating point > 0. Size needs to be specified in microns (um)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "imaging_assay_type",
+      "Description": "Type of imaging assay",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "pyramid",
+      "Description": "The data file contains an image pyramid",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "channel_metadata_filename",
+      "Description": "File name of uploaded companion CSV file containing channel-level metadata details",
+      "Required/optional": "R"
+    }
+  ],
+  "Multiplex_Channels": [
+    {
+      "Property": "channel_id",
+      "Description": "The unique channel identifier for each channel in this image must match the corresponding field in the OME-TIFF header",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "channel_name",
+      "Description": "Channel label for each channel in this image must match the corresponding field in the OME-TIFF header",
+      "Required/optional": "R"
+    },
+    {
+      "Property": "cycle_number",
+      "Description": "the cycle # in which the co-listed reagent(s) was(were) used",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "sub_cycle_number",
+      "Description": "sub-cycle #",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "target_name",
+      "Description": "short descriptive name (abbreviation) for this target (antigen)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "antibody_name",
+      "Description": "short descriptive name for this antibody",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "rrid_identifier",
+      "Description": "Research Resource Identifier",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "fluorophore",
+      "Description": "Fluorescent dye label",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "clone",
+      "Description": "Unique clone identifier",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "lot",
+      "Description": "lot number from vendor",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "catalog_number",
+      "Description": "catalog number from vendor",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "excitation_wavelength",
+      "Description": "center/peak of the excitation spectrum (nm)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "emission_wavelength",
+      "Description": "center/peak of the emission spectrum (nm)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "excitation_bandwidth",
+      "Description": "nominal width of excitation spectrum (nm)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "emission_bandwidth",
+      "Description": "nominal width of emission spectrum (nm)",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "metal_isotope_element",
+      "Description": "Element abbreviation",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "metal_isotope_element",
+      "Description": "Element mass number",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "oligo_barcode_upper_strand",
+      "Description": "DNA barcode used for labeling",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "oligo_barcode_lower_strand",
+      "Description": "DNA barcode used for labeling",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "dilution",
+      "Description": "Final dilution ratio used in experiment",
+      "Required/optional": "O"
+    },
+    {
+      "Property": "concentration",
+      "Description": "Final concentration used in experiment",
+      "Required/optional": "O"
+    }
+  ]
+}

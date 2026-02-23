@@ -265,6 +265,7 @@ STRICT RULES:
 - Always ensure the output is in a polished, professional tone suitable for a scientific dataset description.
 - The output should be a rewritten version of the user's input for this section that improves clarity and informativeness while adhering to all the constraints above.
 
+
 Text to rewrite:
 \"\"\"{section_text}\"\"\"
 """.strip()
