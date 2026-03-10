@@ -158,40 +158,46 @@ def call_ollama(
     bits.append(f"cli: {cli_err}")
     return "[Ollama error] All methods failed. " + " | ".join(bits)
 
-def cicadas_feedback_prompt(section_label: str, section_text: str, guidance: str = "") -> str:
-    section_text = (section_text or "").strip()
+def cicadas_feedback_prompt(section_label: str, user_text: str, context_sections: str = "", guidance: str = "") -> str:
+    user_text = (user_text or "").strip()
     guidance = (guidance or "").strip()
+    context_sections = (context_sections or "").strip()
+
+    context_block = ""
+    if context_sections:
+        context_block = f"""\nOTHER COMPLETED SECTIONS (for coherence only \u2014 do NOT copy, repeat, or summarize their content):\n{context_sections}\n"""
 
     return f"""
 You are an expert technical editor for The Cancer Imaging Archive (TCIA).
 You are rewriting the user's text to be clearer, more specific, and more informative, using only the information they provided.
 
-CICADAS is TCIA’s structured dataset documentation framework. It requires precise, factual descriptions of study purpose, subject criteria, imaging acquisition, data processing, and appropriate research use.
+CICADAS is TCIA's structured dataset documentation framework. It requires precise, factual descriptions of study purpose, subject criteria, imaging acquisition, data processing, and appropriate research use.
 Section to improve: {section_label}
 
 Section requirements:
 {guidance if guidance else "Follow standard CICADAS-style expectations for this section."}
-
+{context_block}
 STRICT RULES:
 - Output ONLY the rewritten text for this section.
 - Do NOT include explanations, commentary, prefatory remarks, or concluding remarks.
 - Do NOT include labels, headings, bullets, Markdown, code blocks, or formatting of any kind.
 - Do NOT include the name of the section or any other section labels in your output. (Example: do not do "Abstract: This dataset is...". Just output the rewritten text itself.)
 - Do NOT invent or assume any facts not explicitly present in the original text.
+- Do NOT copy, repeat, or incorporate content from the other sections provided as context.
+- Use the other sections only to avoid contradictions and ensure consistent terminology.
 - If details are missing, improve clarity using general language without adding new specifics.
 - Keep the rewrite limited strictly to the content of this section.
-- Do NOT reference other sections or incorporate content from them.
 - Maintain or improve the level of informativeness without reducing substantive content.
 - Always use a polished, professional tone appropriate for a scientific dataset description.
 - Always follow all section-specific constraints and hard requirements.
 
 SECTION-SPECIFIC CONSTRAINTS:
 - Title must be a single line and must not contain colons.
-- Abstract must be 2–5 sentences in a single paragraph, without bullets.
-- The output must be a rewritten version of the user’s input that improves clarity and precision while adhering to all constraints above.
+- Abstract must be 2\u20135 sentences in a single paragraph, without bullets.
+- The output must be a rewritten version of the user's input that improves clarity and precision while adhering to all constraints above.
 
 Text to rewrite:
-\"\"\"{section_text}\"\"\"
+\"\"\"{user_text}\"\"\"
 """.strip()
 
 def _clean_ai_output(text: str) -> str:
@@ -707,19 +713,50 @@ NCI/NIH program (e.g., TCGA, CPTAC, APOLLO, Biobank).
         Follow the CICADAS checklist to ensure your dataset is comprehensive and optimally discoverable.
         """)
 
-        st.markdown("### AI rewrite (optional)")
-        model_name = st.text_input("Local model name", value="qwen2:0.5b", key="cicadas_model_name")
-
-        with st.expander("Troubleshoot Ollama connection"):
-            if st.button("Test connection", key="cicadas_test_ollama"):
-                try:
-                    t = requests.get(f"{OLLAMA_HOST}/api/tags", timeout=10)
-                    st.write("Status:", t.status_code)
-                    st.json(t.json() if t.status_code == 200 else {"body": t.text[:500]})
-                except Exception as e:
-                    st.error(str(e))
+        model_name = "qwen2:0.5b"
 
         st.markdown("---")
+
+        # --- Section navigation ---
+        CICADAS_SECTIONS = [
+            ("abstract", "Abstract"),
+            ("introduction", "Introduction"),
+            ("methods_subjects", "Methods: Subjects"),
+            ("methods_acquisition", "Methods: Acquisition"),
+            ("methods_analysis", "Methods: Analysis"),
+            ("usage_notes", "Usage Notes"),
+            ("external_resources", "External Resources"),
+        ]
+
+        if "cicadas_section" not in st.session_state:
+            st.session_state.cicadas_section = CICADAS_SECTIONS[0][0]
+
+        _section_keys = [s[0] for s in CICADAS_SECTIONS]
+        _current_section_idx = _section_keys.index(st.session_state.cicadas_section) if st.session_state.cicadas_section in _section_keys else 0
+
+        _jump_selection = st.selectbox(
+            "Jump to CICADAS section",
+            options=_section_keys,
+            format_func=lambda k: dict(CICADAS_SECTIONS)[k],
+            index=_current_section_idx,
+            key="cicadas_section_selector",
+        )
+        if _jump_selection != st.session_state.cicadas_section:
+            st.session_state.cicadas_section = _jump_selection
+            st.rerun()
+
+        _nav_back_col, _nav_next_col = st.columns(2)
+        with _nav_back_col:
+            if st.button("⬅ Back", key="cicadas_nav_back", use_container_width=True, disabled=(_current_section_idx == 0)):
+                st.session_state.cicadas_section = _section_keys[_current_section_idx - 1]
+                st.rerun()
+        with _nav_next_col:
+            if st.button("Next ➡", key="cicadas_nav_next", use_container_width=True, disabled=(_current_section_idx == len(CICADAS_SECTIONS) - 1)):
+                st.session_state.cicadas_section = _section_keys[_current_section_idx + 1]
+                st.rerun()
+
+        st.markdown("---")
+        # --- End section navigation ---
 
         # Single source of truth for CICADAS inputs (no widget-key collisions)
         if "cicadas_form" not in st.session_state:
@@ -741,7 +778,29 @@ NCI/NIH program (e.g., TCGA, CPTAC, APOLLO, Biobank).
             if not current:
                 st.warning("Add some text first, then run AI rewrite.")
                 return
-            prompt = cicadas_feedback_prompt(label, current, guidance=guidance)
+            _section_names = {
+                "abstract": "Abstract",
+                "introduction": "Introduction",
+                "methods_subjects": "Methods: Subjects",
+                "methods_acquisition": "Methods: Acquisition",
+                "methods_analysis": "Methods: Analysis",
+                "usage_notes": "Usage Notes",
+                "external_resources": "External Resources",
+            }
+            _context_parts = []
+            for _f, _name in _section_names.items():
+                if _f == field:
+                    continue
+                _text = (st.session_state.cicadas_form.get(_f) or "").strip()
+                if _text:
+                    _context_parts.append(f"{_name}:\n{_text}")
+            context_sections = "\n\n".join(_context_parts)
+            prompt = cicadas_feedback_prompt(
+                section_label=label,
+                user_text=current,
+                context_sections=context_sections,
+                guidance=guidance,
+            )
             with st.spinner("Running local AI rewrite..."):
                 out = call_ollama(model=(model_name or "").strip(), prompt=prompt, temperature=0.2)
             st.session_state[ai_key(field)] = _clean_ai_output(out)
@@ -811,64 +870,71 @@ NCI/NIH program (e.g., TCGA, CPTAC, APOLLO, Biobank).
 
             st.markdown("")
 
-        # Sections
-        section_with_ai_drawer(
-            field="abstract",
-            header="Abstract",
-            label="Abstract (Max 1,000 Characters)*",
-            help_text="Brief overview of the dataset: subjects, imaging types, potential applications.",
-            max_chars=1000,
-            guidance="2 to 5 sentences: what the dataset is, who/what it includes, modalities, and intended use. No bullets.",
-        )
+        # --- Conditionally render only the active section ---
+        active = st.session_state.cicadas_section
 
-        section_with_ai_drawer(
-            field="introduction",
-            header="Introduction",
-            label="Introduction",
-            help_text="Purpose and uniqueness of the dataset.",
-        )
-
-        st.write("### Methods")
-
-        section_with_ai_drawer(
-            field="methods_subjects",
-            header="Subject Inclusion and Exclusion Criteria",
-            label="Subject Inclusion and Exclusion Criteria",
-            help_text="Demographics, clinical characteristics, and potential study bias.",
-        )
-
-        section_with_ai_drawer(
-            field="methods_acquisition",
-            header="Data Acquisition",
-            label="Data Acquisition",
-            help_text="Scanner details, sequence parameters, radiotracers, etc.",
-        )
-
-        section_with_ai_drawer(
-            field="methods_analysis",
-            header="Data Analysis",
-            label="Data Analysis",
-            help_text="Conversions, preprocessing, annotation protocols, quality control.",
-        )
-
-        section_with_ai_drawer(
-            field="usage_notes",
-            header="Usage Notes",
-            label="Usage Notes",
-            help_text="Data organization, naming conventions, recommended software.",
-        )
-
-        section_with_ai_drawer(
-            field="external_resources",
-            header="External Resources",
-            label="External Resources (Optional)",
-            help_text="Links to code, related datasets, or other tools.",
-        )
+        if active == "abstract":
+            section_with_ai_drawer(
+                field="abstract",
+                header="Abstract",
+                label="Abstract (Max 1,000 Characters)*",
+                help_text="Brief overview of the dataset: subjects, imaging types, potential applications.",
+                max_chars=1000,
+                guidance="2 to 5 sentences: what the dataset is, who/what it includes, modalities, and intended use. No bullets.",
+            )
+        elif active == "introduction":
+            section_with_ai_drawer(
+                field="introduction",
+                header="Introduction",
+                label="Introduction",
+                help_text="Purpose and uniqueness of the dataset.",
+            )
+        elif active == "methods_subjects":
+            st.write("### Methods")
+            section_with_ai_drawer(
+                field="methods_subjects",
+                header="Subject Inclusion and Exclusion Criteria",
+                label="Subject Inclusion and Exclusion Criteria",
+                help_text="Demographics, clinical characteristics, and potential study bias.",
+            )
+        elif active == "methods_acquisition":
+            st.write("### Methods")
+            section_with_ai_drawer(
+                field="methods_acquisition",
+                header="Data Acquisition",
+                label="Data Acquisition",
+                help_text="Scanner details, sequence parameters, radiotracers, etc.",
+            )
+        elif active == "methods_analysis":
+            st.write("### Methods")
+            section_with_ai_drawer(
+                field="methods_analysis",
+                header="Data Analysis",
+                label="Data Analysis",
+                help_text="Conversions, preprocessing, annotation protocols, quality control.",
+            )
+        elif active == "usage_notes":
+            section_with_ai_drawer(
+                field="usage_notes",
+                header="Usage Notes",
+                label="Usage Notes",
+                help_text="Data organization, naming conventions, recommended software.",
+            )
+        elif active == "external_resources":
+            section_with_ai_drawer(
+                field="external_resources",
+                header="External Resources",
+                label="External Resources (Optional)",
+                help_text="Links to code, related datasets, or other tools.",
+            )
+        # --- End conditional section rendering ---
 
         st.markdown("---")
 
-        # Single Save button for the whole page (keeps the “form flow” feeling)
-        if st.button("Save & Next", type="primary", use_container_width=True):
+        _is_last_section = (_current_section_idx == len(CICADAS_SECTIONS) - 1)
+        _save_btn_label = "Save & Finish CICADAS ➡" if _is_last_section else "Save & Next ➡"
+
+        if st.button(_save_btn_label, type="primary", use_container_width=True):
             st.session_state.cicadas = dict(st.session_state.cicadas_form)
 
             desc_parts = []
@@ -902,15 +968,17 @@ NCI/NIH program (e.g., TCGA, CPTAC, APOLLO, Biobank).
 
             full_description = "\n\n".join(desc_parts)
 
-            if st.session_state.metadata["Dataset"]:
-                st.session_state.metadata["Dataset"][0]["dataset_abstract"] = st.session_state.cicadas["abstract"]
-                st.session_state.metadata["Dataset"][0]["dataset_description"] = full_description
-            else:
-                st.warning("⚠️ Please fill out the basic Dataset information first.")
-                st.stop()
+            if not st.session_state.metadata["Dataset"]:
+                st.session_state.metadata["Dataset"] = [{}]
+            st.session_state.metadata["Dataset"][0]["dataset_abstract"] = st.session_state.cicadas["abstract"]
+            st.session_state.metadata["Dataset"][0]["dataset_description"] = full_description
 
-            st.toast("✅ CICADAS information saved!")
-            st.session_state.phase0_step = "Investigator"
+            if _is_last_section:
+                st.toast("✅ CICADAS information saved!")
+                st.session_state.phase0_step = "Investigator"
+            else:
+                st.toast("✅ Section saved!")
+                st.session_state.cicadas_section = _section_keys[_current_section_idx + 1]
             st.rerun()
 
     # -------------------------------------------------------------------------

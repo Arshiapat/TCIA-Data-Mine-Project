@@ -1,0 +1,21 @@
+acknowledgements	adult_or_childhood_study	dataset_abstract	dataset_description	dataset_id	dataset_long_name	dataset_short_name	funding_agency	funding_source_program_name	grant_id	program.program_id
+		Abstract: This dataset is a structured dataset documentation framework that contains precise, factual descriptions of study purpose, subject criteria, imaging acquisition, data processing, and appropriate research use. It includes MRI scans collected from a group of patients for research purposes, which may be useful for different kinds of analysis. Researchers might use it to explore imaging patterns or test algorithms. More details about the dataset are provided in the sections below.	"## Introduction
+Medical imaging datasets are useful for many kinds of research and development. This dataset was collected as part of a study and includes MRI scans from patients. The goal of collecting the data was to support research and allow others to explore the images. Researchers may find the dataset helpful for testing methods, studying imaging data, or learning more about medical imaging.
+
+## Methods
+### Subject Inclusion and Exclusion Criteria
+Patients were included in the dataset if they participated in the study and had MRI scans available. Some patients were excluded if their data was incomplete or could not be used. The dataset includes participants from a medical study and contains imaging data collected during that study. Other details about the subjects may be provided in the dataset files.
+
+### Data Acquisition
+ifbeiubfiefiuveiufvew
+
+### Data Analysis
+fdibeouifofouewbf
+
+
+
+## Usage Notes
+efcbouebfouebfubw
+
+## External Resources
+ofbfuoebfiuebf"							
